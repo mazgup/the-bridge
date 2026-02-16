@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Bridge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'bridge-slate': '#2D3748', // Deep Slate
+              'bridge-sage': '#9FBFA0', // Soft Sage
+              'bridge-beige': '#F5F5F0', // Beige
+              'bridge-lilac': '#DCD6F7', // Lilac
+              'bridge-navy': '#1A202C',
+            },
+            fontFamily: {
+              sans: ['Outfit', 'sans-serif'],
+              serif: ['Playfair Display', 'serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #F5F5F0;
+        color: #2D3748;
+      }
+      /* Soft gradient background animation */
+      .ambient-gradient {
+        background: radial-gradient(circle at 0% 0%, #9FBFA0 0%, transparent 40%), 
+                    radial-gradient(circle at 100% 0%, #DCD6F7 0%, transparent 40%),
+                    radial-gradient(circle at 100% 100%, #E2E8F0 0%, transparent 40%),
+                    radial-gradient(circle at 0% 100%, #F5F5F0 0%, transparent 40%);
+        filter: blur(80px);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: -1;
+        opacity: 0.6;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.40.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <div class="ambient-gradient"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
