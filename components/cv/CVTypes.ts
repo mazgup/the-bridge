@@ -52,6 +52,8 @@ export interface CVContent {
   experience: CVExperience[];
   projects: CVProject[];
   skills: CVSkillGroup[];
+  languages: string[];
+  interests: string[];
 }
 
 export interface CVMeta {
@@ -62,6 +64,7 @@ export interface CVMeta {
   experience_level: "junior" | "mid" | "senior" | "executive" | "unknown";
   target_pages: 1 | 2;
   cv_style: "experience" | "skills" | "hybrid"; // AI decides
+  archetype?: "Bridge Builder" | "The Coach" | "The Strategist" | "The Headhunter";
 }
 
 export interface CVData {
@@ -93,6 +96,8 @@ export const INITIAL_CV_DATA: CVData = {
     experience: [],
     projects: [],
     skills: [],
+    languages: [],
+    interests: [],
   },
 };
 

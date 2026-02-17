@@ -5,13 +5,16 @@ import { CVSectionEditor } from './CVSectionEditor';
 import { InteractiveOverlay } from './InteractiveOverlay';
 import { OxfordStrictPDF } from '../pdf/OxfordStrictPDF';
 import { ModernImpactPDF } from '../pdf/ModernImpactPDF';
-import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
-import { ArrowLeft, Download, FileText, Upload, SlidersHorizontal, RotateCcw, Save, ZoomIn, ZoomOut, CheckCircle2, Trash2, Clock, Plus, Briefcase } from 'lucide-react';
+import { PDFCanvasPreview } from './PDFCanvasPreview';
+import { PDFDownloadLink, usePDF } from '@react-pdf/renderer';
+import { usePDFLayout } from '../../../hooks/usePDFLayout';
+import { ArrowLeft, Download, FileText, Upload, SlidersHorizontal, RotateCcw, Save, ZoomIn, ZoomOut, CheckCircle2, Trash2, Clock, Plus, Briefcase, Sparkles } from 'lucide-react';
 import { useCVStore, getPhases } from '../../../stores/cvStore';
 import { TemplateType, CVSummary } from '../CVTypes';
 import { doc, getDoc, setDoc, getDocs, collection, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../services/firebase';
 import { useAuth } from '../../../context/AuthContext';
+import { DocRenderer } from './DocRenderer';
 
 
 // ============================================================
@@ -36,7 +39,7 @@ export const UnifiedBuilder: React.FC<UnifiedBuilderProps> = ({ onNavigate }) =>
 
     const { user } = useAuth();
     const hasHydratedRef = useRef(false);
-    const [zoom, setZoom] = useState(1);
+    const [zoom, setZoom] = useState(0.85); // Default fit
     const [isSaving, setIsSaving] = React.useState(false);
     const [isLoadingGallery, setIsLoadingGallery] = useState(false);
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -174,8 +177,31 @@ export const UnifiedBuilder: React.FC<UnifiedBuilderProps> = ({ onNavigate }) =>
         return () => clearTimeout(timeoutId);
     }, [cvData, messages, isBuilderActive, user, activeCvId]);
 
+    // 3. Warn on tab close/refresh if unsaved (or just generally in builder)
+    // 3. Warn on tab close/refresh if unsaved (or just generally in builder)
+    // 3. Warn on tab close/refresh if unsaved
+    useEffect(() => {
+        if (!isBuilderActive) return;
+
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            // Always warn if in builder mode to prevent accidental loss
+            e.preventDefault();
+            e.returnValue = 'You have unsaved changes.';
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isBuilderActive]);
+
     // Load a specific CV from Firestore
     const handleResumeCV = async (cvId: string) => {
+        // FAST PATH: If this CV is already loaded in memory (from localStorage restore), just open it.
+        // This prevents overwriting fresh local data with stale Firestore data.
+        if (activeCvId === cvId && cvData) {
+            setBuilderActive(true);
+            return;
+        }
+
         if (user) {
             try {
                 const docRef = doc(db, 'users', user.uid, 'cvs', cvId);
@@ -266,16 +292,25 @@ export const UnifiedBuilder: React.FC<UnifiedBuilderProps> = ({ onNavigate }) =>
 
     // Template override
     const template = cvData.meta.template;
-    const setTemplate = (t: TemplateType) => updateMeta({ template: t });
+    const setTemplate = (t: TemplateType) => {
+        console.log('[UnifiedBuilder] Setting template to:', t);
+        updateMeta({ template: t });
+    };
+
+    if (import.meta.env.DEV) {
+        console.log('[UnifiedBuilder] Current template state:', template);
+    }
 
     // Memoize PDF component
     const PDFDocument = useMemo(() => {
+        console.log('[UnifiedBuilder] Memoizing PDF. Template:', template);
         if (template === 'modern') {
-            return <ModernImpactPDF data={cvData} />;
+            console.log('[UnifiedBuilder] Returning ModernImpactPDF');
+            return <ModernImpactPDF key="modern" data={cvData} />;
         }
-        return <OxfordStrictPDF data={cvData} />;
+        console.log('[UnifiedBuilder] Returning OxfordStrictPDF');
+        return <OxfordStrictPDF key="oxford" data={cvData} />;
     }, [cvData, template]);
-
 
     // ============================================================
     // View Logic
@@ -299,11 +334,14 @@ export const UnifiedBuilder: React.FC<UnifiedBuilderProps> = ({ onNavigate }) =>
                         {/* Create from Scratch */}
                         <button
                             onClick={() => {
-                                createNewCV();
+                                createNewCV({
+                                    name: user?.displayName || '',
+                                    email: user?.email || ''
+                                });
                             }}
-                            className="group p-10 bg-white border-2 border-slate-100 rounded-2xl hover:border-emerald-400 hover:shadow-lg transition-all duration-300"
+                            className="group p-10 bg-white border-2 border-slate-100 rounded-2xl hover:border-[#9FBFA0] hover:shadow-lg transition-all duration-300"
                         >
-                            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-5 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
+                            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-5 group-hover:bg-[#9FBFA0] group-hover:text-white transition-all duration-300">
                                 <Plus size={32} />
                             </div>
                             <h3 className="text-xl font-bold text-slate-800 mb-2">Create from Scratch</h3>
@@ -453,7 +491,28 @@ export const UnifiedBuilder: React.FC<UnifiedBuilderProps> = ({ onNavigate }) =>
                 {/* Left: Back + Job Title + Saving */}
                 <div className="flex items-center gap-4 shrink-0">
                     <button
-                        onClick={() => returnToGallery()}
+                        onClick={async () => {
+                            // Force save before leaving
+                            if (user && activeCvId) {
+                                try {
+                                    setIsSaving(true);
+                                    const { computeCompletionPercent, deriveCVTitle } = await import('../CVTypes');
+                                    const title = deriveCVTitle(cvData);
+                                    const completion = computeCompletionPercent(cvData);
+                                    await setDoc(doc(db, 'users', user.uid, 'cvs', activeCvId), {
+                                        cvData,
+                                        messages,
+                                        title,
+                                        status: completion >= 100 ? 'completed' : 'in_progress',
+                                        lastUpdated: new Date().toISOString(),
+                                        targetRole: cvData.meta.target_role || '',
+                                        completionPercent: completion,
+                                    });
+                                    saveCurrentToIndex();
+                                } catch (e) { console.error("Save failed on exit", e); }
+                            }
+                            returnToGallery();
+                        }}
                         className="h-9 flex items-center gap-2 px-3 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg text-xs font-medium transition-colors"
                         title="Back to Gallery"
                     >
@@ -468,12 +527,23 @@ export const UnifiedBuilder: React.FC<UnifiedBuilderProps> = ({ onNavigate }) =>
                             </span>
                         </div>
                     )}
+
+                    {/* Archetype Badge */}
+                    {cvData.meta.archetype && (
+                        <div className="h-9 flex items-center gap-2 px-3 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100">
+                            <Sparkles size={14} />
+                            <span className="text-xs font-bold uppercase tracking-wide">
+                                {cvData.meta.archetype}
+                            </span>
+                        </div>
+                    )}
+
                     {user && (
                         <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400">
                             {isSaving ? (
                                 <span className="animate-pulse">Saving...</span>
                             ) : (
-                                <span className="flex items-center gap-1"><CheckCircle2 size={12} className="text-emerald-500" /> Saved</span>
+                                <span className="flex items-center gap-1"><CheckCircle2 size={12} className="text-[#9FBFA0]" /> Saved</span>
                             )}
                         </div>
                     )}
@@ -488,7 +558,7 @@ export const UnifiedBuilder: React.FC<UnifiedBuilderProps> = ({ onNavigate }) =>
                         </div>
                         <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div
-                                className="h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out"
+                                className="h-full bg-[#9FBFA0] rounded-full transition-all duration-500 ease-out"
                                 style={{ width: `${Math.min(100, Math.round((getPhases(cvData).filter(p => p.status === 'done').length / Math.max(1, getPhases(cvData).length - 1)) * 100))}%` }}
                             />
                         </div>
@@ -497,11 +567,16 @@ export const UnifiedBuilder: React.FC<UnifiedBuilderProps> = ({ onNavigate }) =>
 
                 {/* Right: Actions */}
                 {/* Pages Indicator */}
-                <div className="h-9 flex items-center gap-2 bg-slate-50 px-3 rounded-lg border border-slate-200" title={cvData.meta.explanation || "AI Recommendation"}>
+                <div className="h-9 flex items-center gap-2 bg-slate-50 px-3 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors" title={cvData.meta.explanation || "AI Recommendation"}>
                     <FileText size={14} className="text-slate-400" />
-                    <span className="text-xs text-slate-600 font-medium">
-                        {cvData.meta.target_pages === 2 ? '2 Pages' : '1 Page'}
-                    </span>
+                    <select
+                        value={cvData.meta.target_pages || 1}
+                        onChange={(e) => updateMeta({ target_pages: parseInt(e.target.value) as 1 | 2 })}
+                        className="bg-transparent text-xs text-slate-600 font-medium focus:outline-none cursor-pointer h-full appearance-none pr-2"
+                    >
+                        <option value={1}>1 Page</option>
+                        <option value={2}>2 Pages</option>
+                    </select>
                 </div>
 
                 <div className="h-9 flex items-center gap-2 bg-slate-50 px-3 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
@@ -519,7 +594,7 @@ export const UnifiedBuilder: React.FC<UnifiedBuilderProps> = ({ onNavigate }) =>
                 <PDFDownloadLink
                     document={PDFDocument}
                     fileName={`${cvData.content.personal.name || 'My_CV'}.pdf`}
-                    className="h-9 flex items-center gap-2 px-5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
+                    className="h-9 flex items-center gap-2 px-5 bg-[#9FBFA0] text-white rounded-lg text-xs font-bold hover:bg-[#8CA88D] transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
                 >
                     {({ loading }) =>
                         loading ? (
@@ -549,9 +624,9 @@ export const UnifiedBuilder: React.FC<UnifiedBuilderProps> = ({ onNavigate }) =>
                 </div>
 
                 {/* PDF Preview (50%) - Frameless White Theme */}
-                <div className="w-1/2 bg-white relative hidden lg:flex flex-col items-center p-8 overflow-y-auto overflow-x-hidden">
+                <div className="w-1/2 bg-slate-50 relative hidden lg:flex flex-col items-center justify-start p-8 overflow-y-auto overflow-x-hidden">
 
-                    {/* Zoom Controls (Floating) */}
+                    {/* Zoom Controls (Floating - Right side) */}
                     <div className="fixed top-24 right-8 flex flex-col gap-2 bg-white rounded-lg shadow-lg border border-slate-200 p-1.5 z-50">
                         <button
                             onClick={() => setZoom(z => Math.min(z + 0.1, 1.5))}
@@ -572,27 +647,15 @@ export const UnifiedBuilder: React.FC<UnifiedBuilderProps> = ({ onNavigate }) =>
                         </div>
                     </div>
 
-                    {/* Paper Container */}
-                    <div
-                        className="relative transition-all duration-300 ease-out origin-top border border-slate-200 bg-white"
-                        style={{
-                            width: `${zoom * 100}%`,
-                            aspectRatio: '1 / 1.414',
-                            marginBottom: '4rem'
-                        }}
-                    >
-                        <InteractiveOverlay onSelectSection={(section) => setEditingSection(section)} />
-
-                        <PDFViewer
-                            key={zoom}
-                            width="100%"
-                            height="100%"
-                            showToolbar={false}
-                            className="w-full h-full border-none rounded-none bg-white"
-                        >
-                            {PDFDocument}
-                        </PDFViewer>
-                    </div>
+                    {/* PDF Document Renderer (Keyed by template to force reset) */}
+                    <DocRenderer
+                        key={`${template}-${cvData.meta.target_pages || 1}`} // Force remount on template or page count change
+                        document={PDFDocument}
+                        cvData={cvData}
+                        zoom={zoom}
+                        onSetEditingSection={setEditingSection}
+                        templateName={template}
+                    />
                 </div>
             </div>
         </div >

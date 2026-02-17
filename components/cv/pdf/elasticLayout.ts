@@ -147,93 +147,97 @@ function countStructure(cvData: CVData) {
 // The Core Algorithm
 // ============================================================
 
+// ============================================================
+// The Core Algorithm — Iterative Best Fit
+// ============================================================
+
+const PRESETS: StyleConfig[] = [
+    { fontSize: 11, headerFontSize: 13, nameFontSize: 24, lineHeight: 1.45, margins: 55, sectionSpacing: 24, bulletSpacing: 6, entrySpacing: 14, headerBottomMargin: 30 },
+    { fontSize: 10.5, headerFontSize: 12, nameFontSize: 22, lineHeight: 1.4, margins: 50, sectionSpacing: 18, bulletSpacing: 4, entrySpacing: 12, headerBottomMargin: 24 },
+    { fontSize: 10, headerFontSize: 11.5, nameFontSize: 20, lineHeight: 1.35, margins: 40, sectionSpacing: 9, bulletSpacing: 2.5, entrySpacing: 7, headerBottomMargin: 16 },
+    { fontSize: 9.5, headerFontSize: 11, nameFontSize: 18, lineHeight: 1.3, margins: 36, sectionSpacing: 10, bulletSpacing: 2, entrySpacing: 6, headerBottomMargin: 12 }, // Normal
+    { fontSize: 9.25, headerFontSize: 10.5, nameFontSize: 17, lineHeight: 1.25, margins: 34, sectionSpacing: 7, bulletSpacing: 1.5, entrySpacing: 5, headerBottomMargin: 10 },
+    { fontSize: 9, headerFontSize: 10, nameFontSize: 16, lineHeight: 1.2, margins: 32, sectionSpacing: 6, bulletSpacing: 1, entrySpacing: 4, headerBottomMargin: 8 },
+    { fontSize: 8.75, headerFontSize: 9.5, nameFontSize: 15, lineHeight: 1.15, margins: 30, sectionSpacing: 5, bulletSpacing: 0.5, entrySpacing: 3, headerBottomMargin: 6 },
+    { fontSize: 8.5, headerFontSize: 9, nameFontSize: 14, lineHeight: 1.1, margins: 25, sectionSpacing: 4, bulletSpacing: 0.25, entrySpacing: 2, headerBottomMargin: 4 }, // Dense
+    { fontSize: 8, headerFontSize: 9, nameFontSize: 14, lineHeight: 1.1, margins: 20, sectionSpacing: 3, bulletSpacing: 0, entrySpacing: 2, headerBottomMargin: 4 }, // Ultra-Dense (Emergency)
+];
+
+/** Estimate height of content using a specific configuration */
+function estimateHeight(structure: ReturnType<typeof countStructure>, config: StyleConfig): number {
+    const lineHeightPt = config.fontSize * config.lineHeight;
+
+    let h = 0;
+
+    // Header
+    if (structure.hasName) h += config.nameFontSize * 1.3;
+    if (structure.contactItems > 0) h += config.fontSize * 1.5;
+    if (structure.hasLinks) h += config.fontSize * 1.3;
+    h += config.headerBottomMargin;
+
+    // Sections
+    const sectionTitleHeight = config.headerFontSize * 1.5 + 5;
+    h += structure.sections * sectionTitleHeight;
+
+    // Text & Bullets
+    h += structure.textLines * lineHeightPt;
+    h += structure.bulletLines * lineHeightPt;
+
+    // Spacing
+    h += structure.sections * config.sectionSpacing;
+    h += structure.entries * config.entrySpacing;
+    h += structure.bulletLines * config.bulletSpacing;
+
+    return h;
+}
+
 /**
- * Estimate content height in points at given base parameters,
- * then calculate how much extra space is available and distribute it.
+ * Iteratively find the best layout that fits the target page count.
+ * Starts from "Spacious" and shrinks until it fits.
  */
 export function computeElasticStyle(cvData: CVData): StyleConfig {
     const structure = countStructure(cvData);
-    const wordCount = countWords(cvData);
     const targetPages = cvData?.meta?.target_pages || 1;
 
-    // --- Step 1: Pick base font size based on density ---
-    // This determines text height; we'll adjust spacing later
-    const wordsPerPage = wordCount / targetPages;
+    // 1. Iterative Fit: Find the first preset that fits.
+    // If targetPages=1, we stop as soon as height <= A4_HEIGHT.
+    // If targetPages=2, we stop as soon as height <= 2 * A4_HEIGHT.
 
-    let baseFontSize: number;
-    let headerFontSize: number;
-    let nameFontSize: number;
-    let baseLineHeight: number;
-    let margins: number;
+    let bestConfig = PRESETS[PRESETS.length - 1]; // Default to densest if nothing fits
+    let minOverflow = Infinity;
 
-    if (wordsPerPage < 150) {
-        baseFontSize = 11; headerFontSize = 13; nameFontSize = 24;
-        baseLineHeight = 1.45; margins = 55;
-    } else if (wordsPerPage < 250) {
-        baseFontSize = 10.5; headerFontSize = 12; nameFontSize = 22;
-        baseLineHeight = 1.4; margins = 50;
-    } else if (wordsPerPage < 350) {
-        baseFontSize = 10; headerFontSize = 11.5; nameFontSize = 20;
-        baseLineHeight = 1.35; margins = 45;
-    } else if (wordsPerPage < 450) {
-        baseFontSize = 9.5; headerFontSize = 11; nameFontSize = 18;
-        baseLineHeight = 1.3; margins = 40;
-    } else if (wordsPerPage < 550) {
-        baseFontSize = 9.25; headerFontSize = 10.5; nameFontSize = 17;
-        baseLineHeight = 1.25; margins = 36;
-    } else if (wordsPerPage < 650) {
-        baseFontSize = 9; headerFontSize = 10; nameFontSize = 16;
-        baseLineHeight = 1.2; margins = 34;
-    } else if (wordsPerPage < 750) {
-        baseFontSize = 8.75; headerFontSize = 9.5; nameFontSize = 15;
-        baseLineHeight = 1.15; margins = 32;
-    } else {
-        baseFontSize = 8.5; headerFontSize = 9; nameFontSize = 14;
-        baseLineHeight = 1.1; margins = 28;
+    // Start with Spacious (Index 0) -> Dense (Index N)
+    for (const config of PRESETS) {
+        const usableHeight = (A4_HEIGHT_PT - config.margins * 2) * targetPages;
+        const totalHeight = estimateHeight(structure, config);
+
+        if (totalHeight <= usableHeight) {
+            // It fits!
+            bestConfig = config;
+            break;
+        }
+
+        // Track the "least bad" option in case absolutely nothing fits
+        const overflow = totalHeight - usableHeight;
+        if (overflow < minOverflow) {
+            minOverflow = overflow;
+            bestConfig = config; // Keep the one closest to fitting
+        }
     }
 
-    // --- Step 2: Estimate content height at MINIMUM spacing ---
-    const lineHeightPt = baseFontSize * baseLineHeight;
-    const usableHeight = (A4_HEIGHT_PT - margins * 2) * targetPages;
+    // 2. Refine: Distribute any extra space if we have a fit
+    // This phase expands the layout back comfortably if we picked a preset that is *too* small.
+    // E.g. if "Normal" overflowed but "Compact" left 40% empty space, we expand "Compact" slightly.
 
-    // Header block: name + contact + optional links
-    let contentHeight = 0;
-    if (structure.hasName) contentHeight += nameFontSize * 1.3; // name line
-    if (structure.contactItems > 0) contentHeight += baseFontSize * 1.5; // contact row
-    if (structure.hasLinks) contentHeight += baseFontSize * 1.3; // links row
-    const minHeaderBottom = 8;
-    contentHeight += minHeaderBottom;
+    const finalUsableHeight = (A4_HEIGHT_PT - bestConfig.margins * 2) * targetPages;
+    const finalContentHeight = estimateHeight(structure, bestConfig);
+    const extraSpace = Math.max(0, finalUsableHeight - finalContentHeight);
 
-    // Section titles (each is headerFontSize + border + small padding)
-    const sectionTitleHeight = headerFontSize * 1.5 + 5; // title + border + padding
-    contentHeight += structure.sections * sectionTitleHeight;
-
-    // Text lines (summary text, entry headers, skill lines, etc.)
-    contentHeight += structure.textLines * lineHeightPt;
-
-    // Bullet lines
-    contentHeight += structure.bulletLines * lineHeightPt;
-
-    // Minimum spacing (2pt between everything)
-    const minSectionSpacing = 4;
-    const minEntrySpacing = 2;
-    const minBulletSpacing = 0.5;
-    contentHeight += structure.sections * minSectionSpacing;
-    contentHeight += structure.entries * minEntrySpacing;
-    contentHeight += structure.bulletLines * minBulletSpacing;
-
-    // --- Step 3: Calculate available extra space ---
-    const extraSpace = Math.max(0, usableHeight - contentHeight);
-
-    // --- Step 4: Distribute extra space proportionally ---
-    // Priority: section spacing > header margin > entry spacing > bullet spacing
-    // We use "slots" to distribute space weighted by importance
-
+    // Distribution Weights
     const sectionSlots = Math.max(1, structure.sections);
     const entrySlots = Math.max(1, structure.entries);
     const bulletSlots = Math.max(1, structure.bulletLines);
 
-    // Weights: sections get 4x, entries get 2x, header gets 3x, bullets get 1x
     const headerWeight = 3;
     const sectionWeight = 4;
     const entryWeight = 2;
@@ -242,22 +246,19 @@ export function computeElasticStyle(cvData: CVData): StyleConfig {
     const totalWeight = headerWeight + (sectionSlots * sectionWeight) + (entrySlots * entryWeight) + (bulletSlots * bulletWeight);
     const pointsPerWeight = extraSpace / Math.max(1, totalWeight);
 
-    // Calculate distributed spacing (with min and max caps)
-    const headerBottomMargin = Math.min(40, Math.max(minHeaderBottom, minHeaderBottom + pointsPerWeight * headerWeight));
-    const sectionSpacing = Math.min(30, Math.max(minSectionSpacing, minSectionSpacing + pointsPerWeight * sectionWeight));
-    const entrySpacing = Math.min(16, Math.max(minEntrySpacing, minEntrySpacing + pointsPerWeight * entryWeight));
-    const bulletSpacing = Math.min(6, Math.max(minBulletSpacing, minBulletSpacing + pointsPerWeight * bulletWeight));
+    // Expansion limits (don't make it look absurdly spaced out)
+    const isMultiPage = targetPages > 1;
+    const MAX_HEADER_MARGIN = isMultiPage ? 80 : 40;
+    const MAX_SECTION_SPACING = isMultiPage ? 60 : 30;
+    const MAX_ENTRY_SPACING = isMultiPage ? 30 : 16;
+    const MAX_BULLET_SPACING = isMultiPage ? 12 : 6;
 
     return {
-        fontSize: baseFontSize,
-        headerFontSize,
-        nameFontSize,
-        lineHeight: baseLineHeight,
-        margins,
-        sectionSpacing: Math.round(sectionSpacing * 10) / 10,
-        bulletSpacing: Math.round(bulletSpacing * 10) / 10,
-        entrySpacing: Math.round(entrySpacing * 10) / 10,
-        headerBottomMargin: Math.round(headerBottomMargin * 10) / 10,
+        ...bestConfig,
+        headerBottomMargin: Math.min(MAX_HEADER_MARGIN, bestConfig.headerBottomMargin + pointsPerWeight * headerWeight),
+        sectionSpacing: Math.min(MAX_SECTION_SPACING, bestConfig.sectionSpacing + pointsPerWeight * sectionWeight),
+        entrySpacing: Math.min(MAX_ENTRY_SPACING, bestConfig.entrySpacing + pointsPerWeight * entryWeight),
+        bulletSpacing: Math.min(MAX_BULLET_SPACING, bestConfig.bulletSpacing + pointsPerWeight * bulletWeight),
     };
 }
 

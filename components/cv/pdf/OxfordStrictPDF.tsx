@@ -20,115 +20,124 @@ interface TemplateProps {
 
 const createStyles = (config: StyleConfig) =>
     StyleSheet.create({
-        page: {
+        ox_page: {
             flexDirection: 'column',
             backgroundColor: '#FFFFFF',
             padding: config.margins,
             fontFamily: 'Times-Roman',
-            fontSize: config.fontSize,
-            lineHeight: config.lineHeight,
+            fontSize: 10.5, // Slight increase to fill space better
+            lineHeight: 1.6, // More breathing room
             color: '#000000',
         },
         // --- HEADER ---
-        header: {
-            marginBottom: config.headerBottomMargin,
+        ox_header: {
+            marginBottom: 20,
             textAlign: 'center',
         },
-        name: {
-            fontSize: config.nameFontSize,
+        ox_name: {
+            fontSize: 24, // Rezi Oxford size
             fontFamily: 'Times-Bold',
-            textTransform: 'uppercase',
-            letterSpacing: 1.5,
+            // textTransform: 'uppercase', // Removed per user request
             marginBottom: 12,
+            color: '#000000',
         },
-        contactRow: {
+        ox_contactRow: {
             flexDirection: 'row',
             justifyContent: 'center',
             flexWrap: 'wrap',
-            fontSize: config.fontSize - 0.5,
-            color: '#333333',
-            gap: 3,
+            fontSize: 9,
+            color: '#000000',
+            fontStyle: 'italic', // Rezi Oxford often italic contact
         },
-        contactSep: {
-            marginHorizontal: 2,
-            color: '#666',
+        ox_contactSep: {
+            marginHorizontal: 3,
+            color: '#000000',
         },
         // --- SECTIONS ---
-        section: {
-            marginBottom: config.sectionSpacing,
+        ox_section: {
+            marginBottom: 10,
         },
-        sectionTitle: {
-            fontSize: config.headerFontSize,
+        ox_sectionTitle: {
+            fontSize: 11,
             fontFamily: 'Times-Bold',
             textTransform: 'uppercase',
-            borderBottomWidth: 0.75,
+            borderBottomWidth: 1, // Solid line
             borderBottomColor: '#000000',
-            marginBottom: 4,
-            paddingBottom: 1,
-            letterSpacing: 0.8,
+            marginBottom: 8,
+            paddingBottom: 2,
+            letterSpacing: 0.5,
+            marginTop: 5,
         },
         // --- ENTRIES (Experience / Education) ---
-        entry: {
-            marginBottom: config.entrySpacing,
+        ox_entry: {
+            marginBottom: 6,
         },
-        entryRow: {
+        ox_entryRow: {
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'baseline',
-            marginBottom: 0,
-        },
-        entryPrimary: {
-            fontFamily: 'Times-Bold',
-            fontSize: config.fontSize,
-        },
-        entrySecondary: {
-            fontFamily: 'Times-Italic',
-            fontSize: config.fontSize,
-        },
-        entryDate: {
-            fontFamily: 'Times-Italic',
-            fontSize: config.fontSize - 0.5,
-            color: '#333',
-        },
-        // --- BULLETS ---
-        bulletList: {
-            marginLeft: 10,
-            marginTop: 1,
-        },
-        bulletItem: {
-            flexDirection: 'row',
-            marginBottom: config.bulletSpacing,
-        },
-        bulletPoint: {
-            width: 8,
-            fontSize: config.fontSize,
-        },
-        bulletText: {
-            flex: 1,
-            fontSize: config.fontSize,
-        },
-        // --- SUMMARY ---
-        summaryText: {
-            fontSize: config.fontSize,
-            lineHeight: config.lineHeight,
-        },
-        // --- SKILLS ---
-        skillLine: {
-            flexDirection: 'row',
             marginBottom: 1,
         },
-        skillCategory: {
+        ox_entryPrimary: {
             fontFamily: 'Times-Bold',
-            fontSize: config.fontSize,
-            width: 120,
+            fontSize: 11, // Slightly larger for company/school
+            color: '#000000',
         },
-        skillItems: {
+        ox_entrySecondary: {
+            fontFamily: 'Times-Italic',
+            fontSize: 10,
+            color: '#000000',
+        },
+        ox_entryDate: {
+            fontFamily: 'Times-Italic', // Italic dates
+            fontSize: 10,
+            color: '#000000',
+            textAlign: 'right',
+        },
+        // --- BULLETS ---
+        ox_bulletList: {
+            marginLeft: 8, // Less indentation
+            marginTop: 2,
+        },
+        ox_bulletItem: {
+            flexDirection: 'row',
+            marginBottom: 1,
+            textAlign: 'justify', // Academic justification
+        },
+        ox_bulletPoint: {
+            width: 10,
+            fontSize: 10,
+            textAlign: 'center',
+        },
+        ox_bulletText: {
             flex: 1,
-            fontSize: config.fontSize,
+            fontSize: 10,
+            lineHeight: 1.4,
         },
-        linkText: {
-            fontSize: config.fontSize - 1,
-            color: '#333',
+        // --- SUMMARY ---
+        ox_summaryText: {
+            fontSize: 10,
+            lineHeight: 1.5,
+            textAlign: 'justify',
+        },
+        // --- SKILLS ---
+        ox_skillLine: {
+            flexDirection: 'row',
+            marginBottom: 2,
+        },
+        ox_skillCategory: {
+            fontFamily: 'Times-Bold',
+            fontSize: 10,
+            width: 110,
+        },
+        ox_skillItems: {
+            flex: 1,
+            fontSize: 10,
+        },
+        ox_linkText: {
+            fontSize: 9,
+            color: '#000000',
+            textDecoration: 'none',
         },
     });
 
@@ -169,26 +178,30 @@ export const OxfordStrictPDF: React.FC<TemplateProps> = ({ data, styleOverride }
     const projects = content?.projects || [];
     const skills = content?.skills || [];
 
+    if (import.meta.env.DEV) {
+        console.log('[OxfordStrictPDF] Rendering. Personal Data:', personal);
+    }
+
     return (
         <Document>
-            <Page size="A4" style={styles.page}>
+            <Page size="A4" style={styles.ox_page}>
                 {/* ========== HEADER ========== */}
-                <View style={styles.header}>
-                    <Text style={styles.name}>{personal.name || 'YOUR NAME'}</Text>
-                    <View style={styles.contactRow}>
+                <View style={styles.ox_header}>
+                    <Text style={styles.ox_name}>{personal.name || 'YOUR NAME'}</Text>
+                    <View style={styles.ox_contactRow}>
                         {contact.map((item, i) => (
                             <React.Fragment key={i}>
-                                {i > 0 && <Text style={styles.contactSep}>|</Text>}
+                                {i > 0 && <Text style={styles.ox_contactSep}>|</Text>}
                                 <Text>{String(item)}</Text>
                             </React.Fragment>
                         ))}
                     </View>
                     {links.length > 0 && (
-                        <View style={[styles.contactRow, { marginTop: 1 }]}>
+                        <View style={[styles.ox_contactRow, { marginTop: 4 }]}>
                             {links.map((link, i) => (
                                 <React.Fragment key={i}>
-                                    {i > 0 && <Text style={styles.contactSep}>|</Text>}
-                                    <Text style={styles.linkText}>{link.label}: {link.url}</Text>
+                                    {i > 0 && <Text style={styles.ox_contactSep}>|</Text>}
+                                    <Text style={styles.ox_linkText}>{link.label}: {link.url}</Text>
                                 </React.Fragment>
                             ))}
                         </View>
@@ -197,32 +210,32 @@ export const OxfordStrictPDF: React.FC<TemplateProps> = ({ data, styleOverride }
 
                 {/* ========== SUMMARY ========== */}
                 {content?.summary && (
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Professional Summary</Text>
-                        {renderFormattedText(content.summary, styles.summaryText, { fontFamily: 'Times-Bold' })}
+                    <View style={styles.ox_section}>
+                        <Text style={styles.ox_sectionTitle}>Professional Summary</Text>
+                        {renderFormattedText(content.summary, styles.ox_summaryText, { fontFamily: 'Times-Bold' })}
                     </View>
                 )}
 
                 {/* ========== EXPERIENCE ========== */}
                 {experience.length > 0 && (
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Experience</Text>
+                    <View style={styles.ox_section}>
+                        <Text style={styles.ox_sectionTitle}>Experience</Text>
                         {experience.map((exp, i) => (
-                            <View key={i} style={styles.entry}>
-                                <View style={styles.entryRow}>
-                                    <Text style={styles.entryPrimary}>{exp.company}</Text>
-                                    <Text style={styles.entryDate}>{exp.date_range}</Text>
+                            <View key={i} style={styles.ox_entry}>
+                                <View style={styles.ox_entryRow}>
+                                    <Text style={styles.ox_entryPrimary}>{exp.company}</Text>
+                                    <Text style={styles.ox_entryDate}>{exp.date_range}</Text>
                                 </View>
-                                <View style={styles.entryRow}>
-                                    <Text style={styles.entrySecondary}>{exp.role}</Text>
-                                    <Text style={styles.entrySecondary}>{exp.location}</Text>
+                                <View style={styles.ox_entryRow}>
+                                    <Text style={styles.ox_entrySecondary}>{exp.role}</Text>
+                                    <Text style={styles.ox_entrySecondary}>{exp.location}</Text>
                                 </View>
                                 {(exp.bullets || []).length > 0 && (
-                                    <View style={styles.bulletList}>
+                                    <View style={styles.ox_bulletList}>
                                         {(exp.bullets || []).map((bullet, j) => (
-                                            <View key={j} style={styles.bulletItem}>
-                                                <Text style={styles.bulletPoint}>•</Text>
-                                                {renderFormattedText(bullet, styles.bulletText, { fontFamily: 'Times-Bold' })}
+                                            <View key={j} style={styles.ox_bulletItem}>
+                                                <Text style={styles.ox_bulletPoint}>•</Text>
+                                                {renderFormattedText(bullet, styles.ox_bulletText, { fontFamily: 'Times-Bold' })}
                                             </View>
                                         ))}
                                     </View>
@@ -234,21 +247,21 @@ export const OxfordStrictPDF: React.FC<TemplateProps> = ({ data, styleOverride }
 
                 {/* ========== PROJECTS (if present) ========== */}
                 {projects.length > 0 && (
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Projects</Text>
+                    <View style={styles.ox_section}>
+                        <Text style={styles.ox_sectionTitle}>Projects</Text>
                         {projects.map((proj, i) => (
-                            <View key={i} style={styles.entry}>
-                                <View style={styles.entryRow}>
-                                    <Text style={styles.entryPrimary}>{proj.name}</Text>
-                                    {proj.date_range && <Text style={styles.entryDate}>{proj.date_range}</Text>}
+                            <View key={i} style={styles.ox_entry}>
+                                <View style={styles.ox_entryRow}>
+                                    <Text style={styles.ox_entryPrimary}>{proj.name}</Text>
+                                    {proj.date_range && <Text style={styles.ox_entryDate}>{proj.date_range}</Text>}
                                 </View>
                                 <Text style={{ fontSize: config.fontSize, marginBottom: 1 }}>{proj.description}</Text>
                                 {(proj.bullets || []).length > 0 && (
-                                    <View style={styles.bulletList}>
+                                    <View style={styles.ox_bulletList}>
                                         {(proj.bullets || []).map((bullet, j) => (
-                                            <View key={j} style={styles.bulletItem}>
-                                                <Text style={styles.bulletPoint}>•</Text>
-                                                {renderFormattedText(bullet, styles.bulletText, { fontFamily: 'Times-Bold' })}
+                                            <View key={j} style={styles.ox_bulletItem}>
+                                                <Text style={styles.ox_bulletPoint}>•</Text>
+                                                {renderFormattedText(bullet, styles.ox_bulletText, { fontFamily: 'Times-Bold' })}
                                             </View>
                                         ))}
                                     </View>
@@ -260,17 +273,17 @@ export const OxfordStrictPDF: React.FC<TemplateProps> = ({ data, styleOverride }
 
                 {/* ========== EDUCATION ========== */}
                 {education.length > 0 && (
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Education</Text>
+                    <View style={styles.ox_section}>
+                        <Text style={styles.ox_sectionTitle}>Education</Text>
                         {education.map((edu, i) => (
-                            <View key={i} style={styles.entry}>
-                                <View style={styles.entryRow}>
-                                    <Text style={styles.entryPrimary}>{edu.institution}</Text>
-                                    <Text style={styles.entryDate}>{edu.date_range}</Text>
+                            <View key={i} style={styles.ox_entry}>
+                                <View style={styles.ox_entryRow}>
+                                    <Text style={styles.ox_entryPrimary}>{edu.institution}</Text>
+                                    <Text style={styles.ox_entryDate}>{edu.date_range}</Text>
                                 </View>
-                                <View style={styles.entryRow}>
-                                    <Text style={styles.entrySecondary}>{edu.qualification}</Text>
-                                    {edu.grade && <Text style={styles.entrySecondary}>{edu.grade}</Text>}
+                                <View style={styles.ox_entryRow}>
+                                    <Text style={styles.ox_entrySecondary}>{edu.qualification}</Text>
+                                    {edu.grade && <Text style={styles.ox_entrySecondary}>{edu.grade}</Text>}
                                 </View>
                             </View>
                         ))}
@@ -279,14 +292,35 @@ export const OxfordStrictPDF: React.FC<TemplateProps> = ({ data, styleOverride }
 
                 {/* ========== SKILLS ========== */}
                 {skills.length > 0 && (
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Skills</Text>
+                    <View style={styles.ox_section}>
+                        <Text style={styles.ox_sectionTitle}>Skills</Text>
                         {skills.map((group, i) => (
-                            <View key={i} style={styles.skillLine}>
-                                <Text style={styles.skillCategory}>{group.category}:</Text>
-                                <Text style={styles.skillItems}>{(group.items || []).join(', ')}</Text>
+                            <View key={i} style={styles.ox_skillLine}>
+                                <Text style={styles.ox_skillCategory}>{group.category}:</Text>
+                                <Text style={styles.ox_skillItems}>{(group.items || []).join(', ')}</Text>
                             </View>
                         ))}
+                    </View>
+                )}
+
+
+                {/* ========== LANGUAGES ========== */}
+                {(content.languages || []).length > 0 && (
+                    <View style={styles.ox_section}>
+                        <Text style={styles.ox_sectionTitle}>Languages</Text>
+                        <Text style={styles.ox_summaryText}>
+                            {(content.languages || []).join(', ')}
+                        </Text>
+                    </View>
+                )}
+
+                {/* ========== INTERESTS ========== */}
+                {(content.interests || []).length > 0 && (
+                    <View style={styles.ox_section}>
+                        <Text style={styles.ox_sectionTitle}>Interests</Text>
+                        <Text style={styles.ox_summaryText}>
+                            {(content.interests || []).join(', ')}
+                        </Text>
                     </View>
                 )}
             </Page>

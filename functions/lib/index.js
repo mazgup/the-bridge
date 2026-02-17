@@ -33,14 +33,81 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateReturnRoadmap = exports.getFlexSimulationResponse = exports.getFlexSimulationStart = exports.evaluateFlexRequest = exports.getNegotiationRebuttal = exports.generateInterviewCheatSheet = exports.analyzeInterviewAnswer = exports.getNextInterviewQuestion = exports.startInterviewSimulation = exports.generateLinkedInContent = exports.analyzeKeywords = exports.auditConfidence = exports.suggestGapStrategy = exports.enhanceExperience = exports.generateSkillsBasedCV = exports.generateCVFromChat = exports.continueCVChat = exports.startCVChat = exports.generateIndustryPulse = exports.generateBattleCard = exports.findOpportunities = exports.analyzeJobMatch = exports.getDailyInspiration = void 0;
+exports.generateReturnRoadmap = exports.getFlexSimulationResponse = exports.getFlexSimulationStart = exports.evaluateFlexRequest = exports.getNegotiationRebuttal = exports.generateInterviewCheatSheet = exports.analyzeInterviewAnswer = exports.getNextInterviewQuestion = exports.startInterviewSimulation = exports.generateLinkedInContent = exports.analyzeKeywords = exports.auditConfidence = exports.suggestGapStrategy = exports.enhanceExperience = exports.generateSkillsBasedCV = exports.generateCVFromChat = exports.continueCVChat = exports.startCVChat = exports.generateIndustryPulse = exports.generateBattleCard = exports.findOpportunities = exports.parseCVText = exports.analyzeJobMatch = exports.getDailyInspiration = exports.calculateCatalystScore = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const genai_1 = require("@google/genai");
 admin.initializeApp();
 const apiKey = process.env.GEMINI_API_KEY;
 const genAI = apiKey ? new genai_1.GoogleGenAI({ apiKey }) : null;
+// ... existing interfaces ...
 // --- Functions ---
+exports.calculateCatalystScore = functions.runWith({ secrets: ["GEMINI_API_KEY"] }).https.onCall(async (data, context) => {
+    const { cvText, jobDescription } = data;
+    if (!genAI)
+        return {
+            score: 0,
+            breakdown: { metrics: 0, keywords: 0, brevity: 0, impact: 0 },
+            nextSteps: ["Connect AI service to enable scoring."]
+        };
+    const prompt = `
+    Analyze this CV text (and optional JD) to check for "2026 Readiness".
+    Calculate a "Catalyst Score" (0-100).
+    
+    Criteria:
+    1. Metrics: Are there numbers/quantifiable results? (High weight)
+    2. Keywords: Does it match high-value industry terms? (If JD provided, match that).
+    3. Brevity: Is it concise and punchy? (No long blocks).
+    4. Impact: Active verbs vs passive tasks.
+
+    CV Text: "${cvText.substring(0, 2000)}"
+    ${jobDescription ? `Target JD: "${jobDescription.substring(0, 1000)}"` : ""}
+
+    Return JSON:
+    {
+        "score": number,
+        "breakdown": { "metrics": number, "keywords": number, "brevity": number, "impact": number }, 
+        "nextSteps": [3 specific, actionable 1-sentence tips to improve the score]
+    }
+    `;
+    try {
+        const response = await genAI.models.generateContent({
+            model: 'gemini-2.0-flash',
+            contents: prompt,
+            config: {
+                // @ts-ignore
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: genai_1.Type.OBJECT,
+                    properties: {
+                        score: { type: genai_1.Type.INTEGER },
+                        breakdown: {
+                            type: genai_1.Type.OBJECT,
+                            properties: {
+                                metrics: { type: genai_1.Type.INTEGER },
+                                keywords: { type: genai_1.Type.INTEGER },
+                                brevity: { type: genai_1.Type.INTEGER },
+                                impact: { type: genai_1.Type.INTEGER }
+                            }
+                        },
+                        nextSteps: { type: genai_1.Type.ARRAY, items: { type: genai_1.Type.STRING } }
+                    }
+                }
+            }
+        });
+        if (response.text) {
+            return JSON.parse(response.text);
+        }
+        throw new Error("No response");
+    }
+    catch (error) {
+        return {
+            score: 45,
+            breakdown: { metrics: 30, keywords: 40, brevity: 60, impact: 50 },
+            nextSteps: ["Add more numbers to your bullet points.", "Use stronger action verbs.", "Tailor skills to a specific role."]
+        };
+    }
+});
 exports.getDailyInspiration = functions.runWith({ secrets: ["GEMINI_API_KEY"] }).https.onCall(async (data, context) => {
     var _a;
     if (!genAI)
@@ -102,6 +169,75 @@ exports.analyzeJobMatch = functions.runWith({ secrets: ["GEMINI_API_KEY"] }).htt
             gap: "Review recent industry-specific tools.",
             salaryContext: "Competitive within the current landscape."
         };
+    }
+});
+exports.parseCVText = functions.runWith({ secrets: ["GEMINI_API_KEY"] }).https.onCall(async (data, context) => {
+    const { text } = data;
+    if (!genAI)
+        return null;
+    const prompt = `
+    Analyze the following CV text.
+    Extract and structure the data into a JSON object.
+
+    CV Text: "${text.substring(0, 10000)}"
+
+    Return JSON matching this schema:
+    { 
+        "fullName": string, 
+        "email": string,
+        "targetRole": string (infer from summary or most recent role), 
+        "summary": string (if not explicit, synthesize one), 
+        "experience": [{ 
+            "title": string, 
+            "company": string, 
+            "dates": string, 
+            "description": string 
+        }], 
+        "skills": [string] 
+    }
+    `;
+    try {
+        const response = await genAI.models.generateContent({
+            model: 'gemini-2.0-flash',
+            contents: prompt,
+            config: {
+                // @ts-ignore
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: genai_1.Type.OBJECT,
+                    properties: {
+                        fullName: { type: genai_1.Type.STRING },
+                        email: { type: genai_1.Type.STRING },
+                        targetRole: { type: genai_1.Type.STRING },
+                        summary: { type: genai_1.Type.STRING },
+                        experience: {
+                            type: genai_1.Type.ARRAY,
+                            items: {
+                                type: genai_1.Type.OBJECT,
+                                properties: {
+                                    title: { type: genai_1.Type.STRING },
+                                    company: { type: genai_1.Type.STRING },
+                                    dates: { type: genai_1.Type.STRING },
+                                    description: { type: genai_1.Type.STRING }
+                                }
+                            }
+                        },
+                        skills: { type: genai_1.Type.ARRAY, items: { type: genai_1.Type.STRING } }
+                    }
+                }
+            }
+        });
+        if (response.text) {
+            const raw = JSON.parse(response.text);
+            // Ensure ID and Status for frontend compatibility
+            raw.experience = raw.experience.map((e, idx) => (Object.assign(Object.assign({}, e), { id: Date.now().toString() + idx, status: 'neutral' })));
+            return raw;
+        }
+        return null;
+    }
+    catch (error) {
+        console.error("CV Parsing Failed", error);
+        return null; // Handle error gracefully on frontend
     }
 });
 exports.findOpportunities = functions.runWith({ secrets: ["GEMINI_API_KEY"] }).https.onCall(async (data, context) => {

@@ -19,6 +19,30 @@ export const CVChatAgent: React.FC = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const hasTriggeredUpload = useRef(false);
 
+    // Skill Notification State
+    const [skillNotification, setSkillNotification] = useState<string | null>(null);
+    const prevSkillCountRef = useRef(0);
+
+    // Watch for new skills (Path A: Bridge Builder only)
+    useEffect(() => {
+        const skills = cvData.content.skills;
+        const currentCount = skills.reduce((acc, group) => acc + group.items.length, 0);
+
+        // Only trigger if we have a net increase AND it's the right persona
+        if (currentCount > prevSkillCountRef.current && cvData.meta.archetype === 'Bridge Builder') {
+            // Find what was added (simplified: just generic or try to find diff? Generic is safer for now)
+            // Or we can try to find the last added item if we really want to be specific.
+            // Let's just say "Skill Detected!" for confidence.
+            setSkillNotification("Skill Detected! You're doing great.");
+
+            // Auto hide after 3s
+            const timer = setTimeout(() => setSkillNotification(null), 3000);
+            return () => clearTimeout(timer);
+        }
+
+        prevSkillCountRef.current = currentCount;
+    }, [cvData.content.skills, cvData.meta.archetype]);
+
     const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, []);
@@ -140,14 +164,20 @@ export const CVChatAgent: React.FC = () => {
     // Simple markdown-lite renderer for **bold** and \n
     const renderText = (text: string) => {
         return text.split('\n').map((line, i) => {
+            // Split by **text**
             const parts = line.split(/(\*\*.*?\*\*)/g);
             return (
-                <p key={i} className="mb-1 last:mb-0">
+                <p key={i} className="mb-3 last:mb-0 text-slate-700 leading-relaxed">
                     {parts.map((part, j) => {
                         if (part.startsWith('**') && part.endsWith('**')) {
-                            return <strong key={j} className="font-semibold">{part.slice(2, -2)}</strong>;
+                            const content = part.slice(2, -2);
+                            return (
+                                <span key={j} className="font-extrabold text-slate-900">
+                                    {content}
+                                </span>
+                            );
                         }
-                        return part;
+                        return <span key={j}>{part}</span>;
                     })}
                 </p>
             );
@@ -159,7 +189,7 @@ export const CVChatAgent: React.FC = () => {
             {/* ========== HEADER ========== */}
             <div className="bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                    <div className="p-2 bg-[#9FBFA0]/10 text-[#9FBFA0] rounded-xl">
                         <Bot size={20} />
                     </div>
                     {/* Simplified Header */}
@@ -197,8 +227,8 @@ export const CVChatAgent: React.FC = () => {
                                 className={`
                                     max-w-[75%] p-4 text-sm leading-relaxed shadow-sm
                                     ${msg.role === 'user'
-                                        ? 'bg-[#0f766e] text-white rounded-2xl rounded-br-none'
-                                        : 'bg-white border border-slate-100 text-slate-700 rounded-2xl rounded-bl-none'
+                                        ? 'bg-[#9FBFA0] text-white rounded-2xl rounded-br-none shadow-md'
+                                        : 'bg-white border border-slate-100 text-slate-700 rounded-2xl rounded-bl-none shadow-sm'
                                     }
                                 `}
                             >
@@ -222,7 +252,7 @@ export const CVChatAgent: React.FC = () => {
                     <div className="flex justify-end mb-3 pr-1">
                         <button
                             onClick={() => setInput("Can you give me an example or suggestion for this section?")}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium transition-colors border border-emerald-200 shadow-sm"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#9FBFA0]/10 hover:bg-[#9FBFA0]/20 text-[#5e705f] rounded-full text-xs font-medium transition-colors border border-[#9FBFA0]/30 shadow-sm"
                         >
                             <Sparkles size={12} /> Help me answer
                         </button>
@@ -237,13 +267,13 @@ export const CVChatAgent: React.FC = () => {
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder={isLoading ? "AI is thinking..." : "Type your answer..."}
-                        className="w-full pl-5 pr-14 py-4 bg-white border-0 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-700 placeholder:text-slate-400"
+                        className="w-full pl-5 pr-14 py-4 bg-white border-0 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#9FBFA0]/30 text-slate-700 placeholder:text-slate-400"
                         autoFocus
                     />
                     <button
                         onClick={handleSend}
                         disabled={isLoading || !input.trim()}
-                        className="absolute right-2 top-2 bottom-2 aspect-square flex items-center justify-center bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform active:scale-95"
+                        className="absolute right-2 top-2 bottom-2 aspect-square flex items-center justify-center bg-[#9FBFA0] text-white rounded-xl hover:bg-[#8CA88D] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform active:scale-95"
                     >
                         {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                     </button>
@@ -252,12 +282,27 @@ export const CVChatAgent: React.FC = () => {
                 <div className="text-center mt-2">
                     <button
                         onClick={() => setInput("Help me answer this...")}
-                        className="text-[10px] text-slate-400 hover:text-emerald-500 transition-colors flex items-center justify-center gap-1 mx-auto"
+                        className="text-[10px] text-slate-400 hover:text-[#9FBFA0] transition-colors flex items-center justify-center gap-1 mx-auto"
                     >
                         <HelpCircle size={10} /> Not sure what to say?
                     </button>
                 </div>
             </div>
+
+            {/* ========== SKILL NOTIFICATION TOAST ========== */}
+            {skillNotification && (
+                <div className="absolute top-20 right-5 z-50 animate-in slide-in-from-right-5 fade-in duration-300">
+                    <div className="bg-[#9FBFA0] text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3">
+                        <div className="p-1.5 bg-white/20 rounded-full">
+                            <Sparkles size={16} className="text-white" />
+                        </div>
+                        <div>
+                            <div className="font-bold text-sm">Skills Extracted!</div>
+                            <div className="text-xs text-white/90">We're translating your experience.</div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

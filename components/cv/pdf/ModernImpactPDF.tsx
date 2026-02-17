@@ -1,5 +1,5 @@
 import React from 'react';
-import { Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer';
+import { Page, Text, View, Document, StyleSheet, Font } from '@react-pdf/renderer';
 import { CVData } from '../CVTypes';
 import { computeElasticStyle, StyleConfig } from './elasticLayout';
 
@@ -12,15 +12,29 @@ import { computeElasticStyle, StyleConfig } from './elasticLayout';
 // Skills: Linear list (Category: Item, Item).
 // Experience: Role | Company ..... Date
 // ============================================================
-
-const ACCENT = '#2C3E50';
-const ACCENT_LIGHT = '#34495E';
-const GRAY = '#7F8C8D';
+// Rezi-inspired Modern Style
+// Rezi-inspired Modern Style
+const ACCENT = '#2563EB'; // Rezi Blue (Royal/Standard Blue)
+const ACCENT_LIGHT = '#2563EB'; // Consistency
+const TEXT_MAIN = '#2D3748';
+const TEXT_SUB = '#718096';
+const GRAY = '#718096';
 
 interface TemplateProps {
     data: CVData;
     styleOverride?: StyleConfig;
 }
+
+// Register Roboto Font
+// Register Roboto Font
+Font.register({
+    family: 'Roboto',
+    fonts: [
+        { src: '/fonts/Roboto-Regular.ttf', fontWeight: 400 },
+        { src: '/fonts/Roboto-Bold.ttf', fontWeight: 700 }, // Bold
+        { src: '/fonts/Roboto-Bold.ttf', fontWeight: 900 }, // Black
+    ],
+});
 
 const createStyles = (config: StyleConfig) =>
     StyleSheet.create({
@@ -28,40 +42,42 @@ const createStyles = (config: StyleConfig) =>
             flexDirection: 'column',
             backgroundColor: '#FFFFFF',
             padding: config.margins,
-            fontFamily: 'Helvetica',
+            fontFamily: 'Roboto', // Modern Font
             fontSize: config.fontSize,
             lineHeight: config.lineHeight,
-            color: '#2C3E50',
+            color: '#333333',
         },
-        // --- HEADER ---
+        // --- HEADER (Left Aligned for Modern) ---
         header: {
             marginBottom: config.headerBottomMargin,
-            textAlign: 'center',
+            paddingBottom: 10,
+            borderBottomWidth: 1, // Distinct separation
+            borderBottomColor: '#E2E8F0',
+            textAlign: 'left', // Ensure Left
         },
         name: {
-            fontSize: config.nameFontSize,
-            fontFamily: 'Helvetica-Bold', // Standard Bold
-            color: ACCENT,
-            textTransform: 'uppercase',
-            letterSpacing: 1.5,
-            marginBottom: 8,
+            fontSize: 30, // Large
+            fontFamily: 'Roboto',
+            fontWeight: 700, // Explicit bold
+            color: ACCENT, // Rezi Blue
+            // textTransform: 'uppercase', // Removed per user request
+            letterSpacing: -0.5,
+            marginBottom: 20, // Significantly increased spacing (was 10)
         },
         contactRow: {
             flexDirection: 'row',
-            justifyContent: 'center',
+            justifyContent: 'flex-start', // Left align
             flexWrap: 'wrap',
-            fontSize: config.fontSize - 0.5,
-            color: '#000000', // Rezi uses darker text for contact usually
-            gap: 0,
+            fontSize: 9,
+            color: '#4A5568',
+            marginBottom: 4,
+            marginTop: 4, // Added top margin for breathing room
         },
         contactItem: {
-            marginHorizontal: 4,
-        },
-        contactSep: {
-            color: '#BDC3C7',
+            marginRight: 4,
         },
         linkText: {
-            color: '#2980B9', // Blue links? Or stick to Black? Rezi often black. Keeping gray/blue.
+            color: '#4A5568',
             textDecoration: 'none',
         },
         // --- SECTIONS ---
@@ -69,19 +85,19 @@ const createStyles = (config: StyleConfig) =>
             marginBottom: config.sectionSpacing,
         },
         sectionTitle: {
-            fontSize: config.headerFontSize,
-            fontFamily: 'Helvetica-Bold',
-            color: ACCENT,
+            fontSize: 11,
+            fontFamily: 'Roboto',
+            fontWeight: 700,
+            color: '#000000', // Black Headers (Rezi Style)
             textTransform: 'uppercase',
-            letterSpacing: 1.2,
-            borderBottomWidth: 1,
-            borderBottomColor: '#BDC3C7', // Specific gray line
+            letterSpacing: 1.2, // Wide tracking
+            borderBottomWidth: 0,
+            marginTop: 10,
             marginBottom: 8,
-            paddingBottom: 2,
         },
         // --- ENTRIES ---
         entry: {
-            marginBottom: config.entrySpacing,
+            marginBottom: 8,
         },
         entryHeaderRow: {
             flexDirection: 'row',
@@ -97,22 +113,25 @@ const createStyles = (config: StyleConfig) =>
         },
         entryRight: {
             textAlign: 'right',
-            fontSize: config.fontSize - 0.5,
-            color: '#000000',
+            fontSize: 9,
+            color: '#666666',
             minWidth: 80,
         },
         entryRole: {
-            fontFamily: 'Helvetica-Bold',
-            fontSize: config.fontSize,
-            color: '#000000',
+            fontFamily: 'Roboto',
+            fontWeight: 700,
+            fontSize: 10.5,
+            color: ACCENT, // Blue Accent for Title
+            marginRight: 4,
         },
         entryCompany: {
-            fontFamily: 'Helvetica',
-            fontSize: config.fontSize,
+            fontFamily: 'Roboto',
+            fontWeight: 700,
+            fontSize: 10.5,
             color: '#000000',
         },
         entryLocation: {
-            fontSize: config.fontSize - 1,
+            fontSize: 9,
             color: GRAY,
             marginTop: 1,
             textAlign: 'right',
@@ -123,48 +142,45 @@ const createStyles = (config: StyleConfig) =>
         },
         bulletItem: {
             flexDirection: 'row',
-            marginBottom: config.bulletSpacing,
+            marginBottom: 2,
             paddingLeft: 0,
         },
         bulletPoint: {
             width: 10,
-            fontSize: config.fontSize,
+            fontSize: 10,
             color: '#000000',
             textAlign: 'left',
-            lineHeight: config.lineHeight,
+            lineHeight: 1.4,
         },
         bulletText: {
             flex: 1,
-            fontSize: config.fontSize,
-            color: '#2C3E50',
-            lineHeight: config.lineHeight,
+            fontSize: 10.5,
+            color: '#333333',
+            lineHeight: 1.4,
         },
         // --- SUMMARY ---
         summaryText: {
-            fontSize: config.fontSize,
-            lineHeight: config.lineHeight,
-            color: '#2C3E50',
+            fontSize: 10.5,
+            lineHeight: 1.4,
+            color: '#333333',
         },
         // --- SKILLS (Linear) ---
         skillLine: {
             flexDirection: 'row',
             marginBottom: 3,
-            fontSize: config.fontSize,
-            lineHeight: config.lineHeight,
+            fontSize: 10.5,
+            lineHeight: 1.4,
         },
         skillCategory: {
-            fontFamily: 'Helvetica-Bold',
+            fontFamily: 'Roboto',
+            fontWeight: 700,
             color: '#000000',
-            width: 120, // Fixed width for category label? Or just inline? Rezi is inline usually.
-            // Screenshot 4 suggests: "Category" on left? Or inline? 
-            // "Advanced Bid Writing..." looks like just a list?
-            // "Skills" title -> then lines.
-            // I'll make it bold prefix.
+            width: 120,
             marginRight: 4,
         },
         skillList: {
             flex: 1,
-            color: '#2C3E50',
+            color: '#333333',
         },
     });
 
@@ -205,6 +221,10 @@ export const ModernImpactPDF: React.FC<TemplateProps> = ({ data, styleOverride }
     const projects = content?.projects || [];
     const skills = content?.skills || [];
 
+    if (import.meta.env.DEV) {
+        console.log('[ModernImpactPDF] Rendering. Personal Data:', personal);
+    }
+
     // Helper to join items with pipe
     const ContactLine = ({ items }: { items: string[] }) => (
         <View style={styles.contactRow}>
@@ -224,18 +244,23 @@ export const ModernImpactPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                 <View style={styles.header}>
                     <Text style={styles.name}>{personal.name || 'YOUR NAME'}</Text>
 
-                    <ContactLine items={contact} />
+                    <View style={styles.contactRow}>
+                        {contact.map((item, i) => (
+                            <Text key={i} style={styles.contactItem}>
+                                {i > 0 && <Text style={{ color: '#BDC3C7' }}> | </Text>}
+                                {String(item)}
+                            </Text>
+                        ))}
+                    </View>
 
                     {links.length > 0 && (
-                        <View style={{ marginTop: 2 }}>
-                            <View style={styles.contactRow}>
-                                {links.map((link, i) => (
-                                    <React.Fragment key={i}>
-                                        {i > 0 && <Text style={{ marginHorizontal: 4, color: '#BDC3C7' }}>|</Text>}
-                                        <Text style={styles.linkText}>{link.url}</Text>
-                                    </React.Fragment>
-                                ))}
-                            </View>
+                        <View style={styles.contactRow}>
+                            {links.map((link, i) => (
+                                <Text key={i} style={styles.linkText}>
+                                    {i > 0 && <Text style={{ color: '#BDC3C7' }}> | </Text>}
+                                    {link.url}
+                                </Text>
+                            ))}
                         </View>
                     )}
                 </View>
@@ -244,7 +269,7 @@ export const ModernImpactPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                 {content?.summary && (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Summary</Text>
-                        {renderFormattedText(content.summary, styles.summaryText, { fontFamily: 'Helvetica-Bold' })}
+                        {renderFormattedText(content.summary, styles.summaryText, { fontFamily: 'Roboto', fontWeight: 700 })}
                     </View>
                 )}
 
@@ -277,7 +302,7 @@ export const ModernImpactPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                                         {(exp.bullets || []).map((bullet, j) => (
                                             <View key={j} style={styles.bulletItem}>
                                                 <Text style={styles.bulletPoint}>•</Text>
-                                                {renderFormattedText(bullet, styles.bulletText, { fontFamily: 'Helvetica-Bold' })}
+                                                {renderFormattedText(bullet, styles.bulletText, { fontFamily: 'Roboto', fontWeight: 700 })}
                                             </View>
                                         ))}
                                     </View>
@@ -302,7 +327,7 @@ export const ModernImpactPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                                 </Text>
                                 {proj.technologies && proj.technologies.length > 0 && (
                                     <Text style={{ fontSize: config.fontSize - 1, color: GRAY, marginBottom: 2 }}>
-                                        <Text style={{ fontFamily: 'Helvetica-Bold', color: '#000000' }}>Stack: </Text>
+                                        <Text style={{ fontFamily: 'Roboto', fontWeight: 700, color: '#000000' }}>Stack: </Text>
                                         {proj.technologies.join(', ')}
                                     </Text>
                                 )}
@@ -363,6 +388,26 @@ export const ModernImpactPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                                 </View>
                             ))}
                         </View>
+                    </View>
+                )}
+
+                {/* ========== LANGUAGES ========== */}
+                {(content.languages || []).length > 0 && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Languages</Text>
+                        <Text style={styles.summaryText}>
+                            {(content.languages || []).join(', ')}
+                        </Text>
+                    </View>
+                )}
+
+                {/* ========== INTERESTS ========== */}
+                {(content.interests || []).length > 0 && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Interests</Text>
+                        <Text style={styles.summaryText}>
+                            {(content.interests || []).join(', ')}
+                        </Text>
                     </View>
                 )}
             </Page>

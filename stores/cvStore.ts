@@ -6,8 +6,16 @@ import { CVData, CVMeta, CVContent, CVSkillGroup, CVEducation, CVExperience, CVL
 // ============================================================
 
 /** Normalise skills: AI may send flat strings, objects with string items, etc. */
+/** Normalise skills: AI may send flat strings, objects with string items, etc. */
 function normaliseSkills(raw: any): CVSkillGroup[] {
-    if (!raw || !Array.isArray(raw)) return [];
+    if (!raw) return [];
+
+    // Case 0: Top-level string "Java, Python, React"
+    if (typeof raw === 'string') {
+        return [{ category: 'General', items: raw.split(/,\s*/).filter(Boolean) }];
+    }
+
+    if (!Array.isArray(raw)) return [];
 
     // Case 1: flat string array like ["Sage", "Xero", "Excel"]
     if (raw.length > 0 && typeof raw[0] === 'string') {
@@ -26,6 +34,9 @@ function normaliseSkills(raw: any): CVSkillGroup[] {
             items = group.items.split(/,\s*/).filter(Boolean);
         } else if (Array.isArray(group.skills)) {
             items = group.skills.map((i: any) => String(i));
+        } else if (typeof group === 'string') {
+            // Mixed array [ {cat...}, "Random Skill" ] - edge case
+            return { category: 'General', items: [group] };
         }
 
         return { category, items };
@@ -47,15 +58,17 @@ function normaliseEducation(raw: any): CVEducation[] {
 function normaliseExperience(raw: any): CVExperience[] {
     if (!raw || !Array.isArray(raw)) return [];
     return raw.map((exp: any) => ({
-        company: exp.company || '',
+        company: exp.company || exp.employer || exp.organization || '',
         role: exp.role || exp.title || exp.position || '',
         date_range: exp.date_range || exp.dates || '',
         location: exp.location || '',
         bullets: Array.isArray(exp.bullets)
             ? exp.bullets.map((b: any) => String(b))
             : typeof exp.bullets === 'string'
-                ? [exp.bullets]
-                : [],
+                ? [exp.bullets] // Handle single string bullet
+                : typeof exp.description === 'string'
+                    ? [exp.description] // Handle 'description' field used instead of bullets
+                    : [],
     }));
 }
 
@@ -142,9 +155,9 @@ function generateId(): string {
 const INITIAL_MESSAGES: ChatMessage[] = [{
     role: 'model',
     content:
-        "Hi there! 👋 I'm your Career Architect — think of me as a friendly mentor.\n\n" +
-        "Just **talk to me like a friend** — rough answers are absolutely fine. I'll handle all the professional wording for you.\n\n" +
-        "To kick things off, **what kind of work are you looking for?**",
+        "Hi there! 👋 I'm your Career Architect.\n\n" +
+        "To get your CV started, I need a few basics.\n\n" +
+        "**Could you please confirm your full name, email address, phone number, and location (City, Country)?**",
 }];
 
 // ============================================================
@@ -219,7 +232,7 @@ interface CVStore {
     setUploadedCVText: (text: string | null) => void;
 
     // Multi-CV actions
-    createNewCV: () => string;                              // returns new CV id
+    createNewCV: (initialInfo?: { name?: string; email?: string }) => string;
     loadCV: (id: string, data: CVData, msgs: ChatMessage[]) => void;
     saveCurrentToIndex: () => void;                          // snapshot current CV to savedCvs
     deleteCV: (id: string) => void;
@@ -276,51 +289,36 @@ export const useCVStore = create<CVStore>()(
                     if (c.personal) {
                         merged.content.personal = {
                             name: c.personal.name ?? merged.content.personal.name,
-                            contact: c.personal.contact ? normaliseContact(c.personal.contact) : merged.content.personal.contact ?? [],
-                            links: c.personal.links ? normaliseLinks(c.personal.links) : merged.content.personal.links ?? [],
+                            contact: c.personal.contact && c.personal.contact.length > 0 ? normaliseContact(c.personal.contact) : merged.content.personal.contact,
+                            links: c.personal.links && c.personal.links.length > 0 ? normaliseLinks(c.personal.links) : merged.content.personal.links,
                         };
                     }
-                    if (c.summary !== undefined) {
+                    if (c.summary) {
                         merged.content.summary = c.summary;
                     }
-                    if (c.education) {
+                    // SAFEGUARD: Only overwrite if new list has items. Prevents AI 'amnesia' from wiping data.
+                    if (c.education && c.education.length > 0) {
                         merged.content.education = normaliseEducation(c.education);
                     }
-                    if (c.experience) {
+                    if (c.experience && c.experience.length > 0) {
                         merged.content.experience = normaliseExperience(c.experience);
                     }
-                    if (c.projects) {
+                    if (c.projects && c.projects.length > 0) {
                         merged.content.projects = c.projects;
                     }
-                    if (c.skills) {
+                    if (c.skills && c.skills.length > 0) {
                         const incoming = normaliseSkills(c.skills);
-                        const existing = merged.content.skills || [];
-                        const categoryMap = new Map<string, string[]>();
-                        for (const g of existing) {
-                            categoryMap.set(g.category.toLowerCase(), [...g.items]);
-                        }
-                        for (const g of incoming) {
-                            const key = g.category.toLowerCase();
-                            if (categoryMap.has(key)) {
-                                const existingItems = categoryMap.get(key)!;
-                                for (const item of g.items) {
-                                    if (!existingItems.some(e => e.toLowerCase() === item.toLowerCase())) {
-                                        existingItems.push(item);
-                                    }
-                                }
-                                categoryMap.set(key, existingItems);
-                            } else {
-                                categoryMap.set(key, [...g.items]);
-                            }
-                        }
-                        const catCasing = new Map<string, string>();
-                        for (const g of [...existing, ...incoming]) {
-                            catCasing.set(g.category.toLowerCase(), g.category);
-                        }
-                        merged.content.skills = Array.from(categoryMap.entries()).map(([key, items]) => ({
-                            category: catCasing.get(key) || key,
-                            items,
-                        }));
+                        // Overwrite skills if new data is provided
+                        merged.content.skills = incoming;
+                    }
+
+                    if (c.languages && c.languages.length > 0) {
+                        // Reuse normaliseContact logic as it handles strings/objects/mixed well
+                        merged.content.languages = normaliseContact(c.languages);
+                    }
+
+                    if (c.interests && c.interests.length > 0) {
+                        merged.content.interests = normaliseContact(c.interests);
                     }
                 }
 
@@ -353,12 +351,21 @@ export const useCVStore = create<CVStore>()(
         // ========================================
         // Multi-CV actions
         // ========================================
-        createNewCV: () => {
+        createNewCV: (initialInfo?: { name?: string; email?: string }) => {
             const id = generateId();
             const now = new Date().toISOString();
+
+            // Deep clone to ensure we have a fresh, isolated object
+            const startData = JSON.parse(JSON.stringify(INITIAL_CV_DATA));
+
+            if (initialInfo) {
+                if (initialInfo.name) startData.content.personal.name = initialInfo.name;
+                if (initialInfo.email) startData.content.personal.contact = [initialInfo.email];
+            }
+
             set({
                 activeCvId: id,
-                cvData: { ...INITIAL_CV_DATA },
+                cvData: startData,
                 messages: [...INITIAL_MESSAGES],
                 isBuilderActive: true,
                 isScreeningComplete: false,
@@ -369,7 +376,7 @@ export const useCVStore = create<CVStore>()(
             // Add to savedCvs index
             const summary: CVSummary = {
                 id,
-                title: 'Untitled CV',
+                title: startData.content.personal.name || 'Untitled CV',
                 status: 'in_progress',
                 createdAt: now,
                 lastUpdated: now,
@@ -379,7 +386,9 @@ export const useCVStore = create<CVStore>()(
             const updated = [summary, ...get().savedCvs];
             set({ savedCvs: updated });
             saveCvsToStorage(updated);
-            saveActiveSession({ id, cvData: { ...INITIAL_CV_DATA }, messages: [...INITIAL_MESSAGES] });
+
+            // CRITICAL: Save the pre-filled data, not the empty initial template
+            saveActiveSession({ id, cvData: startData, messages: [...INITIAL_MESSAGES] });
 
             return id;
         },
@@ -491,6 +500,7 @@ export const useCVStore = create<CVStore>()(
 // ============================================================
 const savedSession = loadActiveSession();
 if (savedSession) {
+    if (import.meta.env.DEV) console.log('[cvStore] Restoring session:', savedSession.id);
     useCVStore.setState({
         activeCvId: savedSession.id,
         cvData: savedSession.cvData,
@@ -498,6 +508,8 @@ if (savedSession) {
         // Don't auto-activate builder — let user see gallery first
         isBuilderActive: false,
     });
+} else {
+    if (import.meta.env.DEV) console.log('[cvStore] No active session found.');
 }
 
 // ============================================================

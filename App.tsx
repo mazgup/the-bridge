@@ -131,7 +131,7 @@ function AppContent() {
 
 // Sign-in page for unauthenticated users
 function SignInPage() {
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, devLogin } = useAuth();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F5F5F0]">
@@ -152,6 +152,17 @@ function SignInPage() {
           </svg>
           Sign In with Google
         </button>
+        {/* DEV LOGIN BYPASS */}
+        {import.meta.env.DEV && (
+          <div className="mt-4">
+            <button
+              onClick={devLogin}
+              className="text-xs text-red-400 hover:text-red-500 underline"
+            >
+              [DEV] Bypass Login
+            </button>
+          </div>
+        )}
         <p className="text-xs text-slate-400 mt-6">Invite-only access. Contact admin for an invite link.</p>
       </div>
     </div>

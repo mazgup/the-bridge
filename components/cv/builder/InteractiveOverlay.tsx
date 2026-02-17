@@ -1,41 +1,73 @@
 import React from 'react';
 import { CVPhase } from '../../../stores/cvStore';
-import { Edit2 } from 'lucide-react';
+import { CVData } from '../CVTypes';
+import { Edit2, User, FileText, Briefcase, GraduationCap, Code2 } from 'lucide-react';
+import { SectionPositions } from '../../../hooks/usePDFLayout';
 
 interface InteractiveOverlayProps {
+    cvData: CVData;
     onSelectSection: (section: CVPhase) => void;
+    layoutPositions?: SectionPositions;
 }
 
-const ZONES: { id: CVPhase; label: string; top: string; height: string }[] = [
-    { id: 'contact', label: 'Contact Details', top: '0%', height: '12%' },
-    { id: 'summary', label: 'Professional Summary', top: '12%', height: '15%' },
-    { id: 'experience', label: 'Experience', top: '27%', height: '28%' },
-    { id: 'education', label: 'Education', top: '55%', height: '15%' },
-    { id: 'skills', label: 'Skills', top: '70%', height: '15%' },
+const SECTIONS: { id: CVPhase; label: string; icon: React.FC<any> }[] = [
+    { id: 'contact', label: 'Contact', icon: User },
+    { id: 'summary', label: 'Summary', icon: FileText },
+    { id: 'experience', label: 'Experience', icon: Briefcase },
+    { id: 'education', label: 'Education', icon: GraduationCap },
+    { id: 'skills', label: 'Skills', icon: Code2 },
 ];
 
-export const InteractiveOverlay: React.FC<InteractiveOverlayProps> = ({ onSelectSection }) => {
+export const InteractiveOverlay: React.FC<InteractiveOverlayProps> = ({ cvData, onSelectSection, layoutPositions }) => {
+
+    // Fallback defaults if analysis is running or failed
+    // (Used only briefly during initial load)
+    const defaults: Record<string, string> = {
+        contact: '2%',
+        summary: '15%',
+        experience: '35%',
+        education: '70%',
+        skills: '85%'
+    };
+
+    const getPosition = (id: string) => {
+        // 1. Use Deep Research layout if available (Exact Y%)
+        if (layoutPositions && layoutPositions[id] !== undefined) {
+            // Add a small offset (-1%) to center-align with header
+            return `${layoutPositions[id] - 1}% `;
+        }
+        // 2. Fallback
+        return defaults[id] || '0%';
+    };
+
     return (
-        <div className="absolute inset-0 z-30 pointer-events-none">
-            {/* We make the container pointer-events-none so we don't block scrolling if needed, 
-                but children will be pointer-events-auto */}
-
-            {ZONES.map((zone) => (
-                <div
-                    key={zone.id}
-                    onClick={() => onSelectSection(zone.id)}
-                    className="absolute w-full flex items-center justify-center group cursor-pointer pointer-events-auto transition-all duration-200"
-                    style={{ top: zone.top, height: zone.height }}
+        <div className="absolute right-0 top-0 bottom-0 w-12 flex flex-col bg-transparent pointer-events-none z-30">
+            {SECTIONS.map((section) => (
+                <button
+                    key={section.id}
+                    onClick={() => onSelectSection(section.id)}
+                    className="
+                        absolute right-2
+                        group flex items-center justify-center w-8 h-8 
+                        bg-white/90 border border-[#9FBFA0]/30 shadow-sm rounded-full backdrop-blur-sm
+                        text-[#9FBFA0] hover:bg-[#9FBFA0] hover:text-white hover:border-[#9FBFA0] hover:shadow-md hover:scale-110
+                        transition-all duration-300 pointer-events-auto
+                    "
+                    style={{ top: getPosition(section.id) }}
+                    title={`Edit ${section.label} `}
                 >
-                    {/* Hover Effect */}
-                    <div className="absolute inset-0 bg-emerald-500/0 group-hover:bg-emerald-500/10 border-2 border-transparent group-hover:border-emerald-400 transition-all duration-200 rounded-sm" />
+                    <section.icon size={14} />
 
-                    {/* Edit Button (Visible on Hover) */}
-                    <div className="opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100 transition-all duration-200 bg-emerald-500 text-white px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2 font-medium text-xs z-10">
-                        <Edit2 size={12} />
-                        Edit {zone.label}
-                    </div>
-                </div>
+                    {/* Tooltip Label (Left side now) */}
+                    <span className="
+                        absolute right-full mr-2 px-2 py-1 
+                        bg-slate-800 text-white text-[10px] font-medium rounded opacity-0 
+                        group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-sm
+                        transform translate-x-2 group-hover:translate-x-0 transition-transform z-50
+                    ">
+                        Edit {section.label}
+                    </span>
+                </button>
             ))}
         </div>
     );

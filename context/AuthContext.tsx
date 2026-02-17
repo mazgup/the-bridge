@@ -19,6 +19,7 @@ interface AuthContextType {
     accessDenied: boolean;
     signInWithGoogle: () => Promise<void>;
     logout: () => Promise<void>;
+    devLogin: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -163,8 +164,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const devLogin = async () => {
+        const mockUser: any = {
+            uid: 'dev-user-123',
+            email: 'dev@example.com',
+            displayName: 'Dev User',
+            photoURL: '',
+            emailVerified: true,
+        };
+        setUser(mockUser);
+        setIsAuthorized(true);
+        setIsAdmin(true);
+        setAccessDenied(false);
+        setLoading(false);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, isAuthorized, isAdmin, accessDenied, signInWithGoogle, logout }}>
+        <AuthContext.Provider value={{ user, loading, isAuthorized, isAdmin, accessDenied, signInWithGoogle, logout, devLogin }}>
             {!loading && children}
         </AuthContext.Provider>
     );
