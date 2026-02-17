@@ -58,6 +58,23 @@ interface InviteEntry {
     usedAt?: string;
 }
 
+// Helper to render markdown-lite text (matching CVChatAgent)
+const renderText = (text: string) => {
+    return text.split('\n').map((line, i) => {
+        const parts = line.split(/(\*\*.*?\*\*)/g);
+        return (
+            <p key={i} className="mb-3 last:mb-0 text-slate-700 leading-relaxed">
+                {parts.map((part, j) => {
+                    if (part.startsWith('**') && part.endsWith('**')) {
+                        return <span key={j} className="font-extrabold text-slate-900">{part.slice(2, -2)}</span>;
+                    }
+                    return <span key={j}>{part}</span>;
+                })}
+            </p>
+        );
+    });
+};
+
 // =============== Component ===============
 
 interface AdminDashboardProps {
@@ -189,9 +206,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         try {
             await deleteDoc(doc(db, 'invites', inviteId));
             loadAllData(true); // Silent refresh
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error deleting invite:', error);
-            alert('Failed to delete invite');
+            alert('Failed to delete invite: ' + (error.message || error));
         }
     };
 
@@ -212,7 +229,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     }, [selectedCV]);
 
     return (
-        <div className="space-y-6 animate-fade-in pb-12 h-screen flex flex-col">
+        <div className="animate-fade-in pb-12 min-h-screen flex flex-col">
             {/* Main Header (Dashboard Level) - hidden if viewing specific CV to save space, or kept small */}
             {!selectedCV && (
                 <div className="shrink-0 px-6 pt-6">
@@ -266,7 +283,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             )}
 
             {/* Main Content Area */}
-            <div className="flex-1 min-h-0 px-6 pb-6 overflow-hidden flex flex-col">
+            <div className="flex-1 px-6 pb-6 flex flex-col">
                 {loading ? (
                     <div className="flex-1 flex items-center justify-center">
                         <div className="animate-spin w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full" />
@@ -416,63 +433,84 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                             </div>
                         )}
 
-                        {/* ========= CV VIEWER (CHAT + PDF) - SPLIT 50/50 LIKE BUILDER ========= */}
+                        {/* ========= CV VIEWER (CHAT + PDF) - MATCHING UNIFIED BUILDER STYLE ========= */}
                         {selectedCV && (
-                            <div className="flex-1 flex flex-col h-full overflow-hidden bg-white rounded-xl border border-slate-200 shadow-sm">
-                                {/* Header */}
-                                <div className="shrink-0 px-6 py-4 border-b border-slate-200 bg-white flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
+                            <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col font-sans">
+                                {/* Top Toolbar — Sticky & Glassmorphic (Matching Builder) */}
+                                <div className="px-6 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center h-20 gap-4 shrink-0">
+                                    <div className="flex items-center gap-4 shrink-0">
                                         <button
                                             onClick={() => setSelectedCV(null)}
-                                            className="p-2 -ml-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                                            className="h-9 flex items-center gap-2 px-3 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg text-xs font-medium transition-colors"
                                         >
-                                            <ArrowLeft size={20} />
+                                            <ArrowLeft size={14} />
+                                            <span>Back to Dashboard</span>
                                         </button>
-                                        <div>
-                                            <h2 className="text-lg font-bold text-slate-800">{selectedCV.title}</h2>
-                                            <div className="flex items-center gap-2 text-xs text-slate-500">
-                                                <span>Viewing as Admin</span>
-                                                <span>•</span>
-                                                <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">{selectedCV.cvData?.meta?.template || 'Unknown Template'}</span>
-                                            </div>
+
+                                        <div className="h-9 flex items-center gap-2 px-4 bg-slate-100 rounded-lg border border-slate-200">
+                                            <span className="text-sm font-semibold text-slate-700">
+                                                {selectedCV.title}
+                                            </span>
+                                        </div>
+
+                                        <div className="h-9 flex items-center gap-2 px-3 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100">
+                                            <span className="text-xs font-bold uppercase tracking-wide">
+                                                {selectedCV.cvData?.meta?.template || 'Unknown Template'}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-mono text-slate-400">ID: {selectedCV.id}</span>
+
+                                    {/* Center Spacer */}
+                                    <div className="flex-1"></div>
+
+                                    {/* Right: Info */}
+                                    <div className="text-xs text-slate-400 font-mono">
+                                        Read-Only Admin View
                                     </div>
                                 </div>
 
-                                {/* Content split */}
+                                {/* Split Content */}
                                 <div className="flex-1 flex overflow-hidden">
-                                    {/* Left: Chat History (50%) */}
+                                    {/* Left Panel: Chat History (50%) */}
                                     <div className="w-1/2 bg-white border-r border-slate-200 flex flex-col min-w-0">
-                                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2 font-bold text-slate-600 text-sm">
-                                            <MessageCircle size={14} /> Agent Conversation
+                                        {/* Header */}
+                                        <div className="bg-white border-b border-slate-100 px-5 py-4 flex items-center gap-3">
+                                            <div className="p-2 bg-[#9FBFA0]/10 text-[#9FBFA0] rounded-xl">
+                                                <MessageCircle size={20} />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <h3 className="font-semibold text-sm leading-none text-slate-800">Conversation History</h3>
+                                                <span className="text-[10px] text-slate-400">Read Only</span>
+                                            </div>
                                         </div>
-                                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+                                        {/* Messages */}
+                                        <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-[#FAFBFC]">
                                             {selectedCV.messages?.map((msg: any, idx: number) => (
                                                 <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                                    <div className={`max-w-[85%] rounded-2xl p-4 text-sm ${msg.role === 'user'
-                                                        ? 'bg-indigo-600 text-white rounded-tr-none shadow-md'
-                                                        : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none shadow-sm'
-                                                        }`}>
-                                                        <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                                                    <div className={`
+                                                        max-w-[75%] p-4 text-sm leading-relaxed shadow-sm
+                                                        ${msg.role === 'user'
+                                                            ? 'bg-[#9FBFA0] text-white rounded-2xl rounded-br-none shadow-md'
+                                                            : 'bg-white border border-slate-100 text-slate-700 rounded-2xl rounded-bl-none shadow-sm'
+                                                        }
+                                                    `}>
+                                                        {renderText(msg.content)}
                                                     </div>
                                                 </div>
                                             ))}
                                             {(!selectedCV.messages || selectedCV.messages.length === 0) && (
-                                                <div className="text-center text-slate-400 py-12 bg-slate-50/50 rounded-lg border border-dashed border-slate-200 mt-4 mx-4">
+                                                <div className="text-center text-slate-400 py-12">
                                                     <MessageSquare size={24} className="mx-auto mb-2 opacity-50" />
-                                                    No chat history found for this CV.
+                                                    No chat history found.
                                                 </div>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Right: PDF Preview (50%) */}
-                                    <div className="w-1/2 bg-slate-100/50 relative flex flex-col items-center p-8 overflow-y-auto">
-                                        {/* Paper Container */}
-                                        <div className="relative shadow-2xl bg-white transition-all duration-300 ease-out origin-top w-full max-w-[90%]">
+                                    {/* Right: PDF Preview (50%) - Frameless White Theme */}
+                                    <div className="w-1/2 bg-slate-50 relative flex flex-col items-center justify-start p-8 overflow-y-auto">
+                                        <div className="relative shadow-2xl bg-white w-full max-w-[90%] transition-all duration-300">
                                             <PDFViewer
                                                 width="100%"
                                                 style={{ aspectRatio: `1 / ${1.45 * (selectedCV.cvData?.meta?.target_pages || 1)}` }}
@@ -514,55 +552,68 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                         )}
 
                         {activeTab === 'invites' && (
-                            <div className="flex-1 flex flex-col min-h-0 space-y-6">
+                            <div className="flex-1 overflow-y-auto min-h-0 space-y-6 pb-6">
                                 <InviteGenerator invites={invites} onRefresh={() => loadAllData(true)} />
-                                <div className="flex-1 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm flex flex-col min-h-0">
+                                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm flex flex-col">
                                     <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
-                                        <h3 className="font-bold text-slate-800">Active Invites ({invites.length})</h3>
+                                        <h3 className="font-bold text-slate-800">All Invites ({invites.length})</h3>
                                     </div>
-                                    <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-                                        {invites.map((invite) => (
-                                            <div key={invite.id} className="p-4 flex items-center justify-between hover:bg-slate-50 group transition-colors">
-                                                <div>
-                                                    <div className="font-mono text-sm font-bold text-slate-800 select-all flex items-center gap-2">
-                                                        {invite.id}
-                                                        <span className="text-slate-300 font-normal">|</span>
-                                                        <span className="text-xs font-sans text-slate-500 font-normal">
-                                                            expires {new Date(invite.expiresAt).toLocaleDateString()}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                                                        <span>Created: {new Date(invite.createdAt).toLocaleDateString()}</span>
-                                                        {invite.usedByEmail && (
-                                                            <span className="text-indigo-500 font-medium">
-                                                                • Used by: {invite.usedByEmail}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-4">
-                                                    {invite.used ? (
-                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold border border-blue-100">
-                                                            <CheckCircle2 size={12} /> Used
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100">
-                                                            <Clock size={12} /> Active
-                                                        </span>
-                                                    )}
+                                    <div className="divide-y divide-slate-100">
+                                        {invites.length === 0 ? (
+                                            <div className="p-8 text-center text-slate-400 text-sm">No invites generated yet.</div>
+                                        ) : (
+                                            invites.map((invite) => {
+                                                const isExpired = new Date(invite.expiresAt) < new Date();
+                                                const status = invite.used ? 'used' : isExpired ? 'expired' : 'active';
 
-                                                    {!invite.used && (
-                                                        <button
-                                                            onClick={() => handleDeleteInvite(invite.id)}
-                                                            title="Delete Invite"
-                                                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
+                                                return (
+                                                    <div key={invite.id} className="p-4 flex items-center justify-between hover:bg-slate-50 group transition-colors">
+                                                        <div>
+                                                            <div className="font-mono text-sm font-bold text-slate-800 select-all flex items-center gap-2">
+                                                                {invite.id}
+                                                                <span className="text-slate-300 font-normal">|</span>
+                                                                <span className="text-xs font-sans text-slate-500 font-normal">
+                                                                    expires {new Date(invite.expiresAt).toLocaleDateString()}
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-xs text-slate-400 mt-1 flex items-center gap-3">
+                                                                <span className="flex items-center gap-1">
+                                                                    <Clock size={10} />
+                                                                    Created: {new Date(invite.createdAt).toLocaleDateString()}
+                                                                </span>
+                                                                {invite.usedByEmail && (
+                                                                    <span className="text-indigo-600 font-medium bg-indigo-50 px-1.5 py-0.5 rounded">
+                                                                        Used by: {invite.usedByEmail}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-4">
+                                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                                                status === 'used' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                                    'bg-slate-100 text-slate-500 border-slate-200'
+                                                                }`}>
+                                                                {status === 'active' && <CheckCircle2 size={12} />}
+                                                                {status === 'used' && <CheckCircle2 size={12} />}
+                                                                {status === 'expired' && <XCircle size={12} />}
+                                                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                                                            </span>
+
+                                                            {/* Delete button visible for unused invites (active or expired) */}
+                                                            {!invite.used && (
+                                                                <button
+                                                                    onClick={() => handleDeleteInvite(invite.id)}
+                                                                    title="Delete Invite"
+                                                                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
                                     </div>
                                 </div>
                             </div>

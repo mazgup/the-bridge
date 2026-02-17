@@ -10,7 +10,7 @@ interface InviteLandingProps {
 }
 
 export const InviteLanding: React.FC<InviteLandingProps> = ({ inviteId, onNavigate }) => {
-    const { user, signInWithGoogle, isAuthorized } = useAuth();
+    const { user, signInWithGoogle, isAuthorized, accessDenied } = useAuth();
     const [status, setStatus] = useState<'loading' | 'valid' | 'expired' | 'used' | 'not_found'>('loading');
 
     useEffect(() => {
@@ -90,10 +90,19 @@ export const InviteLanding: React.FC<InviteLandingProps> = ({ inviteId, onNaviga
                                 Sign In with Google
                             </button>
                         )}
-                        {user && !isAuthorized && (
+                        {user && !isAuthorized && !accessDenied && (
                             <div className="flex items-center gap-2 justify-center text-emerald-600">
                                 <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
                                 <span className="text-sm">Setting up your account...</span>
+                            </div>
+                        )}
+                        {accessDenied && (
+                            <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">
+                                <div className="flex items-center gap-2 justify-center mb-1 font-bold">
+                                    <AlertCircle size={16} />
+                                    <span>Setup Failed</span>
+                                </div>
+                                Please try refreshing the page or contact support.
                             </div>
                         )}
                     </>

@@ -62,16 +62,16 @@ const createStyles = (config: StyleConfig) =>
             color: ACCENT, // Rezi Blue
             // textTransform: 'uppercase', // Removed per user request
             letterSpacing: -0.5,
-            marginBottom: 20, // Significantly increased spacing (was 10)
+            marginBottom: 10, // Adjusted for consistency (was 20)
         },
         contactRow: {
             flexDirection: 'row',
             justifyContent: 'flex-start', // Left align
             flexWrap: 'wrap',
-            fontSize: 9,
+            fontSize: 12, // Explicitly larger
             color: '#4A5568',
-            marginBottom: 4,
-            marginTop: 4, // Added top margin for breathing room
+            marginBottom: 6,
+            marginTop: 10, // Total gap ~20pt
         },
         contactItem: {
             marginRight: 4,

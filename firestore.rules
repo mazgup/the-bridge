@@ -48,6 +48,8 @@ service cloud.firestore {
       allow create: if isAdmin();
       // Authenticated users can update (to mark as used during redemption)
       allow update: if request.auth != null;
+      // Admins can delete invites
+      allow delete: if isAdmin();
     }
 
     // ============================================================

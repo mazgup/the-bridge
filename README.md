@@ -1,23 +1,47 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# The Bridge — AI Career Architect
 
-# Run and deploy your AI Studio app
+The Bridge is a next-generation career support platform featuring **AI CV Architect**, a conversational agent that builds industry-standard resumes in real-time.
 
-This contains everything you need to run your app locally.
+## 🚀 Features
 
-View your app in AI Studio: https://ai.studio/apps/drive/1Dsirr922A0e3MpajVGG0RCgGbJ-m3c2U
+### AI CV Builder
+- **Conversational Interface**: Chat with an AI strategist to build your CV section by section.
+- **Live PDF Preview**: See your CV evolve in real-time as you chat.
+- **ATS-Optimized Templates**:
+  - **Oxford Strict**: Classic, text-heavy design for Finance/Law.
+  - **Modern Impact**: Clean, accent-colored design for Tech/Creative.
+- **Smart Layout Engine**: "Elastic Layout" automatically adjusts spacing and density to fit content perfectly on A4 pages.
 
-## 📘 Agent Handover & Documentation
-**For a detailed architectural overview, file map, and decision log, please read [HANDOVER.md](./HANDOVER.md).**
+### Admin Dashboard
+- **Invite Management**: Generate, track, and delete exclusive invite links.
+- **User Insights**: View registered users and inspect their CV progress (Read-Only Admin View).
+- **Feedback Loop**: Monitor user feedback directly.
 
-## Run Locally
+## 🛠️ Usage
 
-**Prerequisites:**  Node.js
+### Prerequisites
+- Node.js (v24+ recommended)
+- Firebase Project
 
-
+### Quick Start
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   npm install
+   ```
+2. Set up environment:
+   - Copy `.env.local.example` to `.env.local`
+   - Add your `VITE_GEMINI_API_KEY`
+3. Run locally:
+   ```bash
+   npm run dev
+   ```
+
+### Deployment
+Deployed via Firebase Hosting:
+```bash
+npm run build
+npx firebase deploy --only hosting
+```
+
+## 📘 Documentation
+For a deep dive into the architecture, state management, and design decisions, please refer to [HANDOVER.md](./HANDOVER.md).

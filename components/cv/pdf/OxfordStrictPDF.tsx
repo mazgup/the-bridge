@@ -38,19 +38,22 @@ const createStyles = (config: StyleConfig) =>
             fontSize: 24, // Rezi Oxford size
             fontFamily: 'Times-Bold',
             // textTransform: 'uppercase', // Removed per user request
-            marginBottom: 12,
+            marginBottom: 10, // Adjusted for consistency
             color: '#000000',
         },
         ox_contactRow: {
             flexDirection: 'row',
             justifyContent: 'center',
             flexWrap: 'wrap',
-            fontSize: 9,
+            fontSize: 12, // Explicitly larger
+            fontFamily: 'Times-Roman', // Explicit font
+            fontStyle: 'normal', // Explicit non-italic
             color: '#000000',
-            fontStyle: 'italic', // Rezi Oxford often italic contact
+            marginTop: 10, // Total gap ~20pt
+            marginBottom: 4,
         },
         ox_contactSep: {
-            marginHorizontal: 3,
+            marginHorizontal: 5,
             color: '#000000',
         },
         // --- SECTIONS ---

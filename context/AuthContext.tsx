@@ -33,7 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Check if a user is allowed (exists in allowedUsers collection)
     const checkAuthorization = async (firebaseUser: User): Promise<{ authorized: boolean; admin: boolean }> => {
-        const email = firebaseUser.email;
+        const email = firebaseUser.email?.toLowerCase();
         if (!email) return { authorized: false, admin: false };
 
         // Check if user exists in allowedUsers

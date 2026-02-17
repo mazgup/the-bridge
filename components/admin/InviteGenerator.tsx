@@ -109,48 +109,7 @@ export const InviteGenerator: React.FC<InviteGeneratorProps> = ({ invites, onRef
                 )}
             </div>
 
-            {/* Invites List */}
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100">
-                    <h3 className="font-bold text-slate-800">All Invites ({invites.length})</h3>
-                </div>
-                {invites.length === 0 ? (
-                    <div className="p-8 text-center text-slate-400 text-sm">No invites generated yet.</div>
-                ) : (
-                    <div className="divide-y divide-slate-100">
-                        {invites.map((invite) => {
-                            const status = getInviteStatus(invite);
-                            return (
-                                <div key={invite.id} className="px-6 py-4 flex items-center justify-between gap-4">
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <code className="text-xs text-slate-500 font-mono truncate">{invite.id}</code>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-[10px] text-slate-400">
-                                            <span className="flex items-center gap-1">
-                                                <Clock size={10} />
-                                                Created: {new Date(invite.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                            {invite.usedByEmail && (
-                                                <span>Used by: {invite.usedByEmail}</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 ${status === 'active' ? 'bg-emerald-50 text-emerald-700' :
-                                            status === 'used' ? 'bg-blue-50 text-blue-700' :
-                                                'bg-slate-100 text-slate-500'
-                                        }`}>
-                                        {status === 'active' && <CheckCircle2 size={10} />}
-                                        {status === 'used' && <Check size={10} />}
-                                        {status === 'expired' && <XCircle size={10} />}
-                                        {status}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
+            {/* Invites list moved to AdminDashboard */}
         </div>
     );
 };
