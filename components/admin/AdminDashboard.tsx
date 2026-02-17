@@ -79,8 +79,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     const [selectedCV, setSelectedCV] = useState<UserCV | null>(null);
     const [loadingUserCVs, setLoadingUserCVs] = useState(false);
 
-    const loadAllData = async () => {
-        setLoading(true);
+    const loadAllData = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             // Load users
             const usersSnap = await getDocs(collection(db, 'allowedUsers'));
@@ -105,7 +105,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         } catch (error) {
             console.error('Error loading admin data:', error);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
@@ -165,6 +165,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         loadUserCVs(user);
     };
 
+
     const handleDeleteUser = async (user: AllowedUser) => {
         if (!confirm(`Are you sure you want to delete ${user.displayName || user.email}? This will delete their database record. NOTE: You must also delete them from Firebase Auth in the console.`)) {
             return;
@@ -180,6 +181,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         } catch (e) {
             console.error(e);
             alert('Error deleting user: ' + e);
+        }
+    };
+
+    const handleDeleteInvite = async (inviteId: string) => {
+        if (!confirm('Are you sure you want to delete this invite?')) return;
+        try {
+            await deleteDoc(doc(db, 'invites', inviteId));
+            loadAllData(true); // Silent refresh
+        } catch (error) {
+            console.error('Error deleting invite:', error);
+            alert('Failed to delete invite');
         }
     };
 
@@ -502,28 +514,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                         )}
 
                         {activeTab === 'invites' && (
-                            <div className="space-y-6">
-                                <InviteGenerator onInviteCreated={loadAllData} />
-                                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                                        <h3 className="font-bold text-slate-800">Active Invites</h3>
+                            <div className="flex-1 flex flex-col min-h-0 space-y-6">
+                                <InviteGenerator invites={invites} onRefresh={() => loadAllData(true)} />
+                                <div className="flex-1 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm flex flex-col min-h-0">
+                                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
+                                        <h3 className="font-bold text-slate-800">Active Invites ({invites.length})</h3>
                                     </div>
-                                    <div className="divide-y divide-slate-100">
+                                    <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
                                         {invites.map((invite) => (
-                                            <div key={invite.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
+                                            <div key={invite.id} className="p-4 flex items-center justify-between hover:bg-slate-50 group transition-colors">
                                                 <div>
-                                                    <div className="font-mono text-sm font-bold text-slate-800 select-all">
+                                                    <div className="font-mono text-sm font-bold text-slate-800 select-all flex items-center gap-2">
                                                         {invite.id}
+                                                        <span className="text-slate-300 font-normal">|</span>
+                                                        <span className="text-xs font-sans text-slate-500 font-normal">
+                                                            expires {new Date(invite.expiresAt).toLocaleDateString()}
+                                                        </span>
                                                     </div>
-                                                    <div className="text-xs text-slate-500 mt-1">
-                                                        Expires: {new Date(invite.expiresAt).toLocaleDateString()}
+                                                    <div className="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                                                        <span>Created: {new Date(invite.createdAt).toLocaleDateString()}</span>
+                                                        {invite.usedByEmail && (
+                                                            <span className="text-indigo-500 font-medium">
+                                                                • Used by: {invite.usedByEmail}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
+                                                <div className="flex items-center gap-4">
                                                     {invite.used ? (
-                                                        <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-xs font-bold">Used</span>
+                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold border border-blue-100">
+                                                            <CheckCircle2 size={12} /> Used
+                                                        </span>
                                                     ) : (
-                                                        <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-bold">Active</span>
+                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100">
+                                                            <Clock size={12} /> Active
+                                                        </span>
+                                                    )}
+
+                                                    {!invite.used && (
+                                                        <button
+                                                            onClick={() => handleDeleteInvite(invite.id)}
+                                                            title="Delete Invite"
+                                                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
                                                     )}
                                                 </div>
                                             </div>

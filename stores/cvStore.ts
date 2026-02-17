@@ -234,7 +234,7 @@ interface CVStore {
     // Multi-CV actions
     createNewCV: (initialInfo?: { name?: string; email?: string }) => string;
     loadCV: (id: string, data: CVData, msgs: ChatMessage[]) => void;
-    saveCurrentToIndex: () => void;                          // snapshot current CV to savedCvs
+    saveCurrentToIndex: (candidate?: { id: string, data: CVData, msgs: ChatMessage[] }) => void; // snapshot current CV to savedCvs
     deleteCV: (id: string) => void;
     setSavedCvs: (cvs: CVSummary[]) => void;
     returnToGallery: () => void;                             // exit builder, go back to gallery
@@ -406,24 +406,29 @@ export const useCVStore = create<CVStore>()(
             saveActiveSession({ id, cvData: data, messages: msgs });
         },
 
-        saveCurrentToIndex: () => {
-            const { activeCvId, cvData, messages, savedCvs } = get();
-            if (!activeCvId) return;
+        saveCurrentToIndex: (candidate?) => {
+            // Use provided candidate data (snapshotted) OR current store state
+            const sourceId = candidate?.id || get().activeCvId;
+            const sourceData = candidate?.data || get().cvData;
+            const sourceMsgs = candidate?.msgs || get().messages; // messages not strictly needed for index but consistenxy
 
+            if (!sourceId) return;
+
+            const { savedCvs } = get();
             const now = new Date().toISOString();
-            const title = deriveCVTitle(cvData);
-            const completion = computeCompletionPercent(cvData);
+            const title = deriveCVTitle(sourceData);
+            const completion = computeCompletionPercent(sourceData);
             const status = completion >= 100 ? 'completed' : 'in_progress';
 
             // Update the index entry for this CV
-            const idx = savedCvs.findIndex(s => s.id === activeCvId);
+            const idx = savedCvs.findIndex(s => s.id === sourceId);
             const summary: CVSummary = {
-                id: activeCvId,
+                id: sourceId,
                 title,
                 status: status as 'in_progress' | 'completed',
                 createdAt: idx >= 0 ? savedCvs[idx].createdAt : now,
                 lastUpdated: now,
-                targetRole: cvData.meta.target_role || '',
+                targetRole: sourceData.meta.target_role || '',
                 completionPercent: completion,
             };
 
@@ -437,7 +442,9 @@ export const useCVStore = create<CVStore>()(
 
             set({ savedCvs: updated });
             saveCvsToStorage(updated);
-            saveActiveSession({ id: activeCvId, cvData, messages });
+
+            // Also update the session storage for this specific ID
+            saveActiveSession({ id: sourceId, cvData: sourceData, messages: sourceMsgs });
         },
 
         deleteCV: (id) => {
@@ -523,9 +530,13 @@ useCVStore.subscribe((state, prevState) => {
 
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-        saveActiveSession({ id: state.activeCvId!, cvData: state.cvData, messages: state.messages });
-        // Also update the gallery index
-        state.saveCurrentToIndex();
+        // PERF FIX: Pass the SNAPSHOT state to saveCurrentToIndex so it saves the *correct* CV
+        // even if the user has already switched to a different one.
+        state.saveCurrentToIndex({
+            id: state.activeCvId!,
+            data: state.cvData,
+            msgs: state.messages
+        });
     }, 1000);
 });
 

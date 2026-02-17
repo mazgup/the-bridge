@@ -8,6 +8,9 @@ This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/drive/1Dsirr922A0e3MpajVGG0RCgGbJ-m3c2U
 
+## 📘 Agent Handover & Documentation
+**For a detailed architectural overview, file map, and decision log, please read [HANDOVER.md](./HANDOVER.md).**
+
 ## Run Locally
 
 **Prerequisites:**  Node.js

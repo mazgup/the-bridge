@@ -233,7 +233,7 @@ export const OxfordStrictPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                                 {(exp.bullets || []).length > 0 && (
                                     <View style={styles.ox_bulletList}>
                                         {(exp.bullets || []).map((bullet, j) => (
-                                            <View key={j} style={styles.ox_bulletItem}>
+                                            <View key={j} style={styles.ox_bulletItem} wrap={false}>
                                                 <Text style={styles.ox_bulletPoint}>•</Text>
                                                 {renderFormattedText(bullet, styles.ox_bulletText, { fontFamily: 'Times-Bold' })}
                                             </View>

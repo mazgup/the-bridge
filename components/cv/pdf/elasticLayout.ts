@@ -188,7 +188,8 @@ function estimateHeight(structure: ReturnType<typeof countStructure>, config: St
     h += structure.entries * config.entrySpacing;
     h += structure.bulletLines * config.bulletSpacing;
 
-    return h;
+    // Safety Buffer: Add 10% to account for unexpected line wrapping or rendering differences
+    return h * 1.1;
 }
 
 /**
@@ -247,11 +248,23 @@ export function computeElasticStyle(cvData: CVData): StyleConfig {
     const pointsPerWeight = extraSpace / Math.max(1, totalWeight);
 
     // Expansion limits (don't make it look absurdly spaced out)
+    // Expansion limits (don't make it look absurdly spaced out)
     const isMultiPage = targetPages > 1;
-    const MAX_HEADER_MARGIN = isMultiPage ? 80 : 40;
-    const MAX_SECTION_SPACING = isMultiPage ? 60 : 30;
-    const MAX_ENTRY_SPACING = isMultiPage ? 30 : 16;
-    const MAX_BULLET_SPACING = isMultiPage ? 12 : 6;
+
+    // AGGRESSIVE EXPANSION FOR 2-PAGE CVS
+    // If we are on 2 pages, we really want to fill that second page.
+    const MAX_HEADER_MARGIN = isMultiPage ? 120 : 40;   // Was 80
+    const MAX_SECTION_SPACING = isMultiPage ? 100 : 30; // Was 60
+    const MAX_ENTRY_SPACING = isMultiPage ? 50 : 16;    // Was 30
+    const MAX_BULLET_SPACING = isMultiPage ? 18 : 6;    // Was 12
+
+    // Check Fill Factor
+    const fillRatio = finalContentHeight / finalUsableHeight;
+
+    // If we are using less than 75% of the space on a 2-page CV, 
+    // we should forcefully bump up the base font size if possible (by picking a looser preset)
+    // But since we selected 'bestConfig' based on what fits, going looser might overflow.
+    // Instead, rely on the generous spacing addition below.
 
     return {
         ...bestConfig,

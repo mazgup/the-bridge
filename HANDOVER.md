@@ -49,13 +49,20 @@ User Input → CVChatAgent.tsx → geminiService.ts (Gemini API)
 | `services/geminiService.ts` | Gemini API integration. Contains system prompt (`getSystemPrompt()`), streaming conversation function, response parser, and stub functions for non-CV features. |
 
 ### UI Components
-
 | File | Purpose |
 |------|---------|
-| `components/cv/builder/UnifiedBuilder.tsx` | Main page. Shows landing page → builder mode. Builder has: top toolbar, phase bar, 50/50 split (chat or editor on left, PDF preview on right). |
-| `components/cv/builder/CVChatAgent.tsx` | Chat UI. Streaming messages, `**bold**` markdown rendering, strategy pill, loading states. Calls `streamCVConversation()` and `mergeFromAI()`. |
+| `components/cv/builder/UnifiedBuilder.tsx` | Main page. Shows landing page → builder mode. Builder has: top toolbar, phase bar, 50/50 split (chat or editor on left, PDF preview on right). Now displays **Archetype Badge**. |
+| `components/cv/builder/CVChatAgent.tsx` | Chat UI. Streaming messages, `**bold**` markdown rendering, strategy pill, loading states. Handles **Persona Notifications** (e.g., "Skill Detected"). |
 | `components/cv/builder/CVPhaseBar.tsx` | Horizontal progress stepper: Contact → Experience → Education → Skills → Summary → Review. Auto-computes status from store data. Clicking a phase opens the section editor. |
 | `components/cv/builder/CVSectionEditor.tsx` | Manual form editors for each CV section. Pre-populated from store. Supports add/remove of entries, inline bullet editing. Changes go directly to store → PDF re-renders. |
+
+### Admin & Auth
+| File | Purpose |
+|------|---------|
+| `components/admin/AdminDashboard.tsx` | Main admin interface. Manage Users, View Feedback, **Manage Invites** (Generate, Delete, View Status). |
+| `components/admin/InviteGenerator.tsx` | Component to generate unique, 48h expiry invite links. |
+| `components/InviteLanding.tsx` | Landing page for invite links. Validates invite existence/expiry before allowing sign-up. |
+| `context/AuthContext.tsx` | Handles authentication and **Invite Redemption** logic (associates invite with new user). |
 
 ### PDF Templates
 
@@ -127,7 +134,19 @@ User Input → CVChatAgent.tsx → geminiService.ts (Gemini API)
 
 **Decision**: The AI is instructed to bold the most important part of each question.
 **Why**: Users found the AI's questions long and overwhelming. Bolding the core ask (e.g., "What's **your email address** and **which city** are you based in?") makes it scannable.
-**Location**: `geminiService.ts`, rule #5 in system prompt. Rendering handled by `renderText()` in `CVChatAgent.tsx` (splits on `**...**` regex).
+**Location**: `geminiService.ts`, rule #5 in system prompt. Rendering handled by `renderText()` in `CVChatAgent.tsx`.
+
+### 3.11 Admin Dashboard & Invite System
+
+**Decision**: A dedicated "Invites" tab was added to the Admin Dashboard.
+**Why**: To control access to the private beta. Admins can generate single-use links that expire in 48 hours. The system tracks who used which invite and when. Recent updates fixed layout scrolling and added a "Delete" function for unused invites to unclutter the list.
+**Location**: `AdminDashboard.tsx`, `InviteGenerator.tsx`, `AuthContext.tsx`.
+
+### 3.12 AI Personas & Archetypes
+
+**Decision**: The AI now classifies users into one of 4 archetypes (Bridge Builder, Non-Linear Strategist, etc.) based on their initial input.
+**Why**: To tailor the CV strategy. "Bridge Builders" (Juniors) get skill extraction help. "Strategists" (Career Changers) get help framing transferable skills. The UI displays an "Archetype Badge" to show the active persona.
+**Location**: `geminiService.ts` (System Prompt), `CVTypes.ts` (`archetype` field), `UnifiedBuilder.tsx` (Badge display).
 
 ---
 
@@ -201,6 +220,9 @@ The full CV state is always sent with every message (`JSON.stringify(currentCV, 
 - ✅ PDF export/download
 - ✅ Dynamic date awareness (today's date injected)
 - ✅ Condensed PDF layout matching professional tools
+- ✅ **Admin Dashboard**: Invite generation, tracking, and deletion.
+- ✅ **AI Personas**: Archetype classification and UI badges.
+- ✅ **Layout Engine**: 2-page aggressive filling, orphaned bullet prevention.
 - ✅ TypeScript build: zero errors
 
 ### What Needs Testing

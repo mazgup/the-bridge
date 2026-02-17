@@ -300,7 +300,7 @@ export const ModernImpactPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                                 {(exp.bullets || []).length > 0 && (
                                     <View style={styles.bulletList}>
                                         {(exp.bullets || []).map((bullet, j) => (
-                                            <View key={j} style={styles.bulletItem}>
+                                            <View key={j} style={styles.bulletItem} wrap={false}>
                                                 <Text style={styles.bulletPoint}>•</Text>
                                                 {renderFormattedText(bullet, styles.bulletText, { fontFamily: 'Roboto', fontWeight: 700 })}
                                             </View>
