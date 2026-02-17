@@ -31,7 +31,7 @@ const createStyles = (config: StyleConfig) =>
         },
         // --- HEADER ---
         header: {
-            marginBottom: config.sectionSpacing,
+            marginBottom: config.headerBottomMargin,
             textAlign: 'center',
         },
         name: {
@@ -39,7 +39,7 @@ const createStyles = (config: StyleConfig) =>
             fontFamily: 'Times-Bold',
             textTransform: 'uppercase',
             letterSpacing: 1.5,
-            marginBottom: 2,
+            marginBottom: 12,
         },
         contactRow: {
             flexDirection: 'row',
@@ -120,18 +120,37 @@ const createStyles = (config: StyleConfig) =>
         skillCategory: {
             fontFamily: 'Times-Bold',
             fontSize: config.fontSize,
-            width: 90,
+            width: 120,
         },
         skillItems: {
             flex: 1,
             fontSize: config.fontSize,
         },
-        // --- LINKS ---
         linkText: {
             fontSize: config.fontSize - 1,
             color: '#333',
         },
     });
+
+// Helper to render text with **bold** formatting
+const renderFormattedText = (text: string | undefined, style: any, boldStyle: any) => {
+    if (!text) return null;
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return (
+        <Text style={style}>
+            {parts.map((part, i) => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                    return (
+                        <Text key={i} style={boldStyle}>
+                            {part.slice(2, -2)}
+                        </Text>
+                    );
+                }
+                return <Text key={i}>{part}</Text>;
+            })}
+        </Text>
+    );
+};
 
 export const OxfordStrictPDF: React.FC<TemplateProps> = ({ data, styleOverride }) => {
     const config = styleOverride || computeElasticStyle(data);
@@ -140,7 +159,10 @@ export const OxfordStrictPDF: React.FC<TemplateProps> = ({ data, styleOverride }
 
     // Safety: ensure we have content before rendering
     const personal = content?.personal || { name: '', contact: [], links: [] };
-    const contact = personal.contact || [];
+    // Defensive: ensure contact items are always flat strings (AI may send {type, value} objects)
+    const contact = (personal.contact || []).map((item: any) =>
+        typeof item === 'string' ? item : (item?.value || item?.label || item?.text || '')
+    ).filter(Boolean);
     const links = personal.links || [];
     const experience = content?.experience || [];
     const education = content?.education || [];
@@ -157,7 +179,7 @@ export const OxfordStrictPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                         {contact.map((item, i) => (
                             <React.Fragment key={i}>
                                 {i > 0 && <Text style={styles.contactSep}>|</Text>}
-                                <Text>{item}</Text>
+                                <Text>{String(item)}</Text>
                             </React.Fragment>
                         ))}
                     </View>
@@ -177,7 +199,7 @@ export const OxfordStrictPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                 {content?.summary && (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Professional Summary</Text>
-                        <Text style={styles.summaryText}>{content.summary}</Text>
+                        {renderFormattedText(content.summary, styles.summaryText, { fontFamily: 'Times-Bold' })}
                     </View>
                 )}
 
@@ -200,7 +222,7 @@ export const OxfordStrictPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                                         {(exp.bullets || []).map((bullet, j) => (
                                             <View key={j} style={styles.bulletItem}>
                                                 <Text style={styles.bulletPoint}>•</Text>
-                                                <Text style={styles.bulletText}>{bullet}</Text>
+                                                {renderFormattedText(bullet, styles.bulletText, { fontFamily: 'Times-Bold' })}
                                             </View>
                                         ))}
                                     </View>
@@ -226,7 +248,7 @@ export const OxfordStrictPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                                         {(proj.bullets || []).map((bullet, j) => (
                                             <View key={j} style={styles.bulletItem}>
                                                 <Text style={styles.bulletPoint}>•</Text>
-                                                <Text style={styles.bulletText}>{bullet}</Text>
+                                                {renderFormattedText(bullet, styles.bulletText, { fontFamily: 'Times-Bold' })}
                                             </View>
                                         ))}
                                     </View>

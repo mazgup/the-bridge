@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, MessageSquare } from 'lucide-react';
 import { useCVStore, CVPhase } from '../../../stores/cvStore';
 import { CVExperience, CVEducation, CVSkillGroup, CVLink } from '../CVTypes';
 
@@ -30,18 +30,19 @@ export const CVSectionEditor: React.FC<SectionEditorProps> = ({ section }) => {
     return (
         <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             {/* Header */}
-            <div className="bg-[#1a1a2e] text-white px-5 py-4 flex items-center gap-3">
-                <button
-                    onClick={() => setEditingSection(null)}
-                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-                    title="Back to chat"
-                >
-                    <ArrowLeft size={18} />
-                </button>
+            <div className="bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between gap-3">
                 <div>
-                    <h3 className="font-semibold text-sm">Edit: {section.charAt(0).toUpperCase() + section.slice(1)}</h3>
+                    <h3 className="font-semibold text-sm text-slate-800">Edit: {section.charAt(0).toUpperCase() + section.slice(1)}</h3>
                     <p className="text-[10px] text-slate-400 tracking-wide">Changes update the preview in real-time</p>
                 </div>
+                <button
+                    onClick={() => setEditingSection(null)}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors text-xs font-medium border border-emerald-100"
+                    title="Return to Chat"
+                >
+                    <MessageSquare size={14} />
+                    <span>Back to Chat</span>
+                </button>
             </div>
 
             {/* Form Content */}
@@ -283,7 +284,8 @@ const SkillsEditor: React.FC<{ content: any; updateContent: any }> = ({ content,
                             <input
                                 className={inputCls}
                                 value={(group.items || []).join(', ')}
-                                onChange={(e) => updateGroup(i, 'items', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+                                onChange={(e) => updateGroup(i, 'items', e.target.value.split(',').map((s) => s.trim()))}
+                                onBlur={(e) => updateGroup(i, 'items', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
                                 placeholder="Excel, QuickBooks, Financial Reporting"
                             />
                         </div>

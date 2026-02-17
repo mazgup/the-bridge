@@ -4,19 +4,18 @@ import { CVData } from '../CVTypes';
 import { computeElasticStyle, StyleConfig } from './elasticLayout';
 
 // ============================================================
-// Modern Impact Template — Tech / Startup / Creative
+// Modern Impact Template (Rezi Style)
 // ============================================================
-// Font: Helvetica (built-in PDF sans-serif)
-// Accent: Navy Blue #2C3E50
-// Name: Centered, large
-// Skills: 2-column grid with tag-style badges
-// CONDENSED: minimal whitespace, professional density
+// Font: Helvetica (Standard PDF font)
+// Design: Clean, linear, professional.
+// Header: High impact, centered.
+// Skills: Linear list (Category: Item, Item).
+// Experience: Role | Company ..... Date
 // ============================================================
 
 const ACCENT = '#2C3E50';
 const ACCENT_LIGHT = '#34495E';
 const GRAY = '#7F8C8D';
-const LIGHT_BG = '#F2F4F4';
 
 interface TemplateProps {
     data: CVData;
@@ -36,29 +35,34 @@ const createStyles = (config: StyleConfig) =>
         },
         // --- HEADER ---
         header: {
-            marginBottom: config.sectionSpacing,
+            marginBottom: config.headerBottomMargin,
             textAlign: 'center',
-            borderBottomWidth: 1.5,
-            borderBottomColor: ACCENT,
-            paddingBottom: 6,
         },
         name: {
             fontSize: config.nameFontSize,
-            fontFamily: 'Helvetica-Bold',
+            fontFamily: 'Helvetica-Bold', // Standard Bold
             color: ACCENT,
-            letterSpacing: 1,
-            marginBottom: 2,
+            textTransform: 'uppercase',
+            letterSpacing: 1.5,
+            marginBottom: 8,
         },
         contactRow: {
             flexDirection: 'row',
             justifyContent: 'center',
             flexWrap: 'wrap',
             fontSize: config.fontSize - 0.5,
-            color: GRAY,
-            gap: 4,
+            color: '#000000', // Rezi uses darker text for contact usually
+            gap: 0,
+        },
+        contactItem: {
+            marginHorizontal: 4,
         },
         contactSep: {
             color: '#BDC3C7',
+        },
+        linkText: {
+            color: '#2980B9', // Blue links? Or stick to Black? Rezi often black. Keeping gray/blue.
+            textDecoration: 'none',
         },
         // --- SECTIONS ---
         section: {
@@ -71,121 +75,147 @@ const createStyles = (config: StyleConfig) =>
             textTransform: 'uppercase',
             letterSpacing: 1.2,
             borderBottomWidth: 1,
-            borderBottomColor: '#E5E7E9',
-            marginBottom: 4,
+            borderBottomColor: '#BDC3C7', // Specific gray line
+            marginBottom: 8,
             paddingBottom: 2,
         },
         // --- ENTRIES ---
         entry: {
             marginBottom: config.entrySpacing,
         },
-        entryRow: {
+        entryHeaderRow: {
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'baseline',
-            marginBottom: 0,
+            marginBottom: 2,
         },
-        entryPrimary: {
+        entryLeft: {
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'baseline',
+            flexWrap: 'wrap',
+        },
+        entryRight: {
+            textAlign: 'right',
+            fontSize: config.fontSize - 0.5,
+            color: '#000000',
+            minWidth: 80,
+        },
+        entryRole: {
             fontFamily: 'Helvetica-Bold',
             fontSize: config.fontSize,
             color: '#000000',
         },
-        entryRole: {
-            fontFamily: 'Helvetica-Bold',
-            fontSize: config.fontSize - 0.5,
-            color: ACCENT_LIGHT,
-            marginBottom: 1,
-        },
-        entryDate: {
-            fontSize: config.fontSize - 1,
-            color: GRAY,
+        entryCompany: {
+            fontFamily: 'Helvetica',
+            fontSize: config.fontSize,
+            color: '#000000',
         },
         entryLocation: {
             fontSize: config.fontSize - 1,
             color: GRAY,
+            marginTop: 1,
+            textAlign: 'right',
         },
         // --- BULLETS ---
         bulletList: {
-            marginTop: 1,
+            marginTop: 2,
         },
         bulletItem: {
             flexDirection: 'row',
             marginBottom: config.bulletSpacing,
+            paddingLeft: 0,
         },
         bulletPoint: {
-            width: 8,
+            width: 10,
             fontSize: config.fontSize,
-            color: ACCENT,
-            textAlign: 'center',
+            color: '#000000',
+            textAlign: 'left',
+            lineHeight: config.lineHeight,
         },
         bulletText: {
             flex: 1,
             fontSize: config.fontSize,
             color: '#2C3E50',
+            lineHeight: config.lineHeight,
         },
         // --- SUMMARY ---
         summaryText: {
             fontSize: config.fontSize,
             lineHeight: config.lineHeight,
-            color: '#34495E',
+            color: '#2C3E50',
         },
-        // --- SKILLS (2-column grid with tags) ---
-        skillGroupRow: {
+        // --- SKILLS (Linear) ---
+        skillLine: {
+            flexDirection: 'row',
             marginBottom: 3,
+            fontSize: config.fontSize,
+            lineHeight: config.lineHeight,
         },
         skillCategory: {
             fontFamily: 'Helvetica-Bold',
-            fontSize: config.fontSize - 0.5,
-            color: ACCENT,
-            marginBottom: 2,
+            color: '#000000',
+            width: 120, // Fixed width for category label? Or just inline? Rezi is inline usually.
+            // Screenshot 4 suggests: "Category" on left? Or inline? 
+            // "Advanced Bid Writing..." looks like just a list?
+            // "Skills" title -> then lines.
+            // I'll make it bold prefix.
+            marginRight: 4,
         },
-        skillTagContainer: {
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 3,
-        },
-        skillTag: {
-            fontSize: config.fontSize - 1.5,
-            backgroundColor: LIGHT_BG,
-            paddingHorizontal: 5,
-            paddingVertical: 2,
-            borderRadius: 2,
+        skillList: {
+            flex: 1,
             color: '#2C3E50',
         },
-        // --- 2-Column Skills Layout ---
-        skillsGrid: {
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-        },
-        skillsColumn: {
-            width: '50%',
-            paddingRight: 6,
-        },
-        // --- LINKS ---
-        linkText: {
-            fontSize: config.fontSize - 1,
-            color: GRAY,
-        },
     });
+
+// Helper to render text with **bold** formatting
+const renderFormattedText = (text: string | undefined, style: any, boldStyle: any) => {
+    if (!text) return null;
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return (
+        <Text style={style}>
+            {parts.map((part, i) => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                    return (
+                        <Text key={i} style={boldStyle}>
+                            {part.slice(2, -2)}
+                        </Text>
+                    );
+                }
+                return <Text key={i}>{part}</Text>;
+            })}
+        </Text>
+    );
+};
 
 export const ModernImpactPDF: React.FC<TemplateProps> = ({ data, styleOverride }) => {
     const config = styleOverride || computeElasticStyle(data);
     const styles = createStyles(config);
     const content = data?.content;
 
-    // Safety: ensure we have content before rendering
+    // Safety
     const personal = content?.personal || { name: '', contact: [], links: [] };
-    const contact = personal.contact || [];
+    // Defensive: ensure contact items are always flat strings (AI may send {type, value} objects)
+    const contact = (personal.contact || []).map((item: any) =>
+        typeof item === 'string' ? item : (item?.value || item?.label || item?.text || '')
+    ).filter(Boolean);
     const links = personal.links || [];
     const experience = content?.experience || [];
     const education = content?.education || [];
     const projects = content?.projects || [];
     const skills = content?.skills || [];
 
-    // Split skills into 2 columns
-    const midPoint = Math.ceil(skills.length / 2);
-    const skillsCol1 = skills.slice(0, midPoint);
-    const skillsCol2 = skills.slice(midPoint);
+    // Helper to join items with pipe
+    const ContactLine = ({ items }: { items: string[] }) => (
+        <View style={styles.contactRow}>
+            {items.map((item, i) => (
+                <React.Fragment key={i}>
+                    {i > 0 && <Text style={{ marginHorizontal: 4, color: '#BDC3C7' }}>|</Text>}
+                    <Text>{String(item)}</Text>
+                </React.Fragment>
+            ))}
+        </View>
+    );
 
     return (
         <Document>
@@ -193,22 +223,19 @@ export const ModernImpactPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                 {/* ========== HEADER ========== */}
                 <View style={styles.header}>
                     <Text style={styles.name}>{personal.name || 'YOUR NAME'}</Text>
-                    <View style={styles.contactRow}>
-                        {contact.map((item, i) => (
-                            <React.Fragment key={i}>
-                                {i > 0 && <Text style={styles.contactSep}>•</Text>}
-                                <Text>{item}</Text>
-                            </React.Fragment>
-                        ))}
-                    </View>
+
+                    <ContactLine items={contact} />
+
                     {links.length > 0 && (
-                        <View style={[styles.contactRow, { marginTop: 2 }]}>
-                            {links.map((link, i) => (
-                                <React.Fragment key={i}>
-                                    {i > 0 && <Text style={styles.contactSep}>•</Text>}
-                                    <Text style={styles.linkText}>{link.url}</Text>
-                                </React.Fragment>
-                            ))}
+                        <View style={{ marginTop: 2 }}>
+                            <View style={styles.contactRow}>
+                                {links.map((link, i) => (
+                                    <React.Fragment key={i}>
+                                        {i > 0 && <Text style={{ marginHorizontal: 4, color: '#BDC3C7' }}>|</Text>}
+                                        <Text style={styles.linkText}>{link.url}</Text>
+                                    </React.Fragment>
+                                ))}
+                            </View>
                         </View>
                     )}
                 </View>
@@ -217,7 +244,7 @@ export const ModernImpactPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                 {content?.summary && (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Summary</Text>
-                        <Text style={styles.summaryText}>{content.summary}</Text>
+                        {renderFormattedText(content.summary, styles.summaryText, { fontFamily: 'Helvetica-Bold' })}
                     </View>
                 )}
 
@@ -227,20 +254,30 @@ export const ModernImpactPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                         <Text style={styles.sectionTitle}>Experience</Text>
                         {experience.map((exp, i) => (
                             <View key={i} style={styles.entry}>
-                                <View style={styles.entryRow}>
-                                    <Text style={styles.entryPrimary}>{exp.company}</Text>
-                                    <Text style={styles.entryDate}>{exp.date_range}</Text>
+                                {/* Header Row: Role | Company ... Date */}
+                                <View style={styles.entryHeaderRow}>
+                                    <View style={styles.entryLeft}>
+                                        <Text style={styles.entryRole}>{exp.role}</Text>
+                                        {exp.company && (
+                                            <>
+                                                <Text style={{ marginHorizontal: 4, color: '#BDC3C7' }}>|</Text>
+                                                <Text style={styles.entryCompany}>{exp.company}</Text>
+                                            </>
+                                        )}
+                                    </View>
+                                    <View>
+                                        <Text style={styles.entryRight}>{exp.date_range}</Text>
+                                        {exp.location && <Text style={styles.entryLocation}>{exp.location}</Text>}
+                                    </View>
                                 </View>
-                                <View style={styles.entryRow}>
-                                    <Text style={styles.entryRole}>{exp.role}</Text>
-                                    <Text style={styles.entryLocation}>{exp.location}</Text>
-                                </View>
+
+                                {/* Bullets */}
                                 {(exp.bullets || []).length > 0 && (
                                     <View style={styles.bulletList}>
                                         {(exp.bullets || []).map((bullet, j) => (
                                             <View key={j} style={styles.bulletItem}>
-                                                <Text style={styles.bulletPoint}>▸</Text>
-                                                <Text style={styles.bulletText}>{bullet}</Text>
+                                                <Text style={styles.bulletPoint}>•</Text>
+                                                {renderFormattedText(bullet, styles.bulletText, { fontFamily: 'Helvetica-Bold' })}
                                             </View>
                                         ))}
                                     </View>
@@ -256,26 +293,25 @@ export const ModernImpactPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                         <Text style={styles.sectionTitle}>Projects</Text>
                         {projects.map((proj, i) => (
                             <View key={i} style={styles.entry}>
-                                <View style={styles.entryRow}>
-                                    <Text style={styles.entryPrimary}>{proj.name}</Text>
-                                    {proj.date_range && <Text style={styles.entryDate}>{proj.date_range}</Text>}
+                                <View style={styles.entryHeaderRow}>
+                                    <Text style={styles.entryRole}>{proj.name}</Text>
+                                    {proj.date_range && <Text style={styles.entryRight}>{proj.date_range}</Text>}
                                 </View>
-                                <Text style={{ fontSize: config.fontSize, marginBottom: 1, color: ACCENT_LIGHT }}>
+                                <Text style={{ fontSize: config.fontSize, marginBottom: 2, color: ACCENT_LIGHT }}>
                                     {proj.description}
                                 </Text>
                                 {proj.technologies && proj.technologies.length > 0 && (
-                                    <View style={[styles.skillTagContainer, { marginBottom: 2 }]}>
-                                        {proj.technologies.map((tech, j) => (
-                                            <Text key={j} style={styles.skillTag}>{tech}</Text>
-                                        ))}
-                                    </View>
+                                    <Text style={{ fontSize: config.fontSize - 1, color: GRAY, marginBottom: 2 }}>
+                                        <Text style={{ fontFamily: 'Helvetica-Bold', color: '#000000' }}>Stack: </Text>
+                                        {proj.technologies.join(', ')}
+                                    </Text>
                                 )}
                                 {(proj.bullets || []).length > 0 && (
                                     <View style={styles.bulletList}>
                                         {(proj.bullets || []).map((bullet, j) => (
                                             <View key={j} style={styles.bulletItem}>
-                                                <Text style={styles.bulletPoint}>▸</Text>
-                                                <Text style={styles.bulletText}>{bullet}</Text>
+                                                <Text style={styles.bulletPoint}>•</Text>
+                                                {renderFormattedText(bullet, styles.bulletText, { fontFamily: 'Helvetica-Bold' })}
                                             </View>
                                         ))}
                                     </View>
@@ -291,48 +327,41 @@ export const ModernImpactPDF: React.FC<TemplateProps> = ({ data, styleOverride }
                         <Text style={styles.sectionTitle}>Education</Text>
                         {education.map((edu, i) => (
                             <View key={i} style={styles.entry}>
-                                <View style={styles.entryRow}>
-                                    <Text style={styles.entryPrimary}>{edu.institution}</Text>
-                                    <Text style={styles.entryDate}>{edu.date_range}</Text>
+                                <View style={styles.entryHeaderRow}>
+                                    <View style={styles.entryLeft}>
+                                        <Text style={styles.entryRole}>{edu.qualification}</Text>
+                                        {edu.institution && (
+                                            <>
+                                                <Text style={{ marginHorizontal: 4, color: '#BDC3C7' }}>|</Text>
+                                                <Text style={styles.entryCompany}>{edu.institution}</Text>
+                                            </>
+                                        )}
+                                    </View>
+                                    <Text style={styles.entryRight}>{edu.date_range}</Text>
                                 </View>
-                                <View style={styles.entryRow}>
-                                    <Text style={styles.entryRole}>{edu.qualification}</Text>
-                                    {edu.grade && <Text style={styles.entryLocation}>{edu.grade}</Text>}
-                                </View>
+                                {edu.grade && (
+                                    <Text style={{ fontSize: config.fontSize - 1, color: GRAY, marginTop: 1 }}>{edu.grade}</Text>
+                                )}
                             </View>
                         ))}
                     </View>
                 )}
 
-                {/* ========== SKILLS (2-Column Grid) ========== */}
+                {/* ========== SKILLS (Linear List) ========== */}
                 {skills.length > 0 && (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Skills</Text>
-                        <View style={styles.skillsGrid}>
-                            <View style={styles.skillsColumn}>
-                                {skillsCol1.map((group, i) => (
-                                    <View key={i} style={styles.skillGroupRow}>
-                                        <Text style={styles.skillCategory}>{group.category}</Text>
-                                        <View style={styles.skillTagContainer}>
-                                            {(group.items || []).map((item, j) => (
-                                                <Text key={j} style={styles.skillTag}>{item}</Text>
-                                            ))}
-                                        </View>
-                                    </View>
-                                ))}
-                            </View>
-                            <View style={styles.skillsColumn}>
-                                {skillsCol2.map((group, i) => (
-                                    <View key={i} style={styles.skillGroupRow}>
-                                        <Text style={styles.skillCategory}>{group.category}</Text>
-                                        <View style={styles.skillTagContainer}>
-                                            {(group.items || []).map((item, j) => (
-                                                <Text key={j} style={styles.skillTag}>{item}</Text>
-                                            ))}
-                                        </View>
-                                    </View>
-                                ))}
-                            </View>
+                        <View>
+                            {skills.map((group, i) => (
+                                <View key={i} style={styles.skillLine}>
+                                    {group.category && group.category !== 'General' && (
+                                        <Text style={styles.skillCategory}>{group.category}:</Text>
+                                    )}
+                                    <Text style={styles.skillList}>
+                                        {(group.items || []).join(', ')}
+                                    </Text>
+                                </View>
+                            ))}
                         </View>
                     </View>
                 )}

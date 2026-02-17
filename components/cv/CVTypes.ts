@@ -97,6 +97,43 @@ export const INITIAL_CV_DATA: CVData = {
 };
 
 // ============================================================
+// Multi-CV Gallery Types
+// ============================================================
+export interface CVSummary {
+  id: string;
+  title: string;                    // derived from name or target role
+  status: 'in_progress' | 'completed';
+  createdAt: string;
+  lastUpdated: string;
+  targetRole: string;
+  completionPercent: number;
+}
+
+/** Compute how complete a CV is (0–100) based on which sections have data */
+export function computeCompletionPercent(cv: CVData): number {
+  const checks = [
+    !!cv.content.personal.name,                        // has name
+    (cv.content.personal.contact || []).length > 0,    // has contact info
+    (cv.content.experience || []).length > 0,           // has experience
+    (cv.content.education || []).length > 0,            // has education
+    (cv.content.skills || []).length > 0,               // has skills
+    !!cv.content.summary,                               // has summary
+  ];
+  const filled = checks.filter(Boolean).length;
+  return Math.round((filled / checks.length) * 100);
+}
+
+/** Derive a display title from CV data */
+export function deriveCVTitle(cv: CVData): string {
+  if (cv.content.personal.name && cv.meta.target_role) {
+    return `${cv.content.personal.name} — ${cv.meta.target_role}`;
+  }
+  if (cv.content.personal.name) return cv.content.personal.name;
+  if (cv.meta.target_role) return cv.meta.target_role;
+  return 'Untitled CV';
+}
+
+// ============================================================
 // Backward Compatibility — DO NOT USE IN NEW CODE
 // These aliases exist ONLY so Dashboard, ReturnHub, etc. don't break
 // ============================================================

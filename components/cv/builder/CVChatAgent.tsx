@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, Loader2, Sparkles, HelpCircle } from 'lucide-react';
+import { Send, Loader2, Sparkles, HelpCircle, Bot } from 'lucide-react';
 import { ChatMessage, streamCVConversation, AIResponse } from '../../../services/geminiService';
 import { useCVStore } from '../../../stores/cvStore';
 
@@ -8,21 +9,15 @@ import { useCVStore } from '../../../stores/cvStore';
 // ============================================================
 
 export const CVChatAgent: React.FC = () => {
-    const { cvData, mergeFromAI } = useCVStore();
+    // Access messages and actions from store
+    const { cvData, mergeFromAI, messages, addMessage, setMessages, uploadedCVText, setUploadedCVText } = useCVStore();
 
-    const [messages, setMessages] = useState<ChatMessage[]>([
-        {
-            role: 'model',
-            content:
-                "Hi there! \ud83d\udc4b I'm your Career Architect \u2014 think of me as a friendly mentor who's here to help you build a brilliant CV.\n\n" +
-                "Don't worry if you're unsure about anything \u2014 we'll figure it out together, one step at a time.\n\n" +
-                "To get started, **what kind of work are you looking for?** It's okay if you're not 100% sure yet \u2014 just give me a rough idea and we'll go from there.",
-        },
-    ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
     const [explanation, setExplanation] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const hasTriggeredUpload = useRef(false);
 
     const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,56 +27,53 @@ export const CVChatAgent: React.FC = () => {
         scrollToBottom();
     }, [messages, scrollToBottom]);
 
-    const handleSend = async () => {
-        if (!input.trim() || isLoading) return;
+    // Core send function used by both manual input and auto-trigger
+    const sendMessage = useCallback(async (userMessage: string) => {
+        if (isLoading) return;
 
-        const userMessage = input.trim();
+        const historySnapshot = [...useCVStore.getState().messages];
         const userMsg: ChatMessage = { role: 'user', content: userMessage };
 
-        // Snapshot history BEFORE adding new messages
-        const historySnapshot = [...messages];
-
-        // Add user message + empty AI placeholder immediately
-        setMessages((prev) => [
-            ...prev,
+        setMessages([
+            ...historySnapshot,
             userMsg,
-            { role: 'model', content: '' },
+            { role: 'model', content: '' } // Placeholder
         ]);
-        setInput('');
+
         setIsLoading(true);
         setExplanation(null);
 
-        // The AI placeholder is at index: historySnapshot.length + 1
         const aiIdx = historySnapshot.length + 1;
 
         try {
+            const currentCV = useCVStore.getState().cvData;
             const response = await streamCVConversation(
-                historySnapshot,
-                cvData,
+                [...historySnapshot, userMsg],
+                currentCV,
                 userMessage,
                 (partialText: string) => {
-                    // Strip json_cv_update blocks from visible text during streaming
                     const cleanText = partialText
                         .replace(/```json_cv_update[\s\S]*?```/g, '')
+                        .replace(/```json[\s\S]*?```/g, '')
                         .replace(/```json_cv_update[\s\S]*/g, '')
                         .trim();
-                    setMessages((prev) => {
-                        const updated = [...prev];
+
+                    useCVStore.setState(state => {
+                        const updated = [...state.messages];
                         if (updated[aiIdx]) {
-                            updated[aiIdx] = { role: 'model', content: cleanText };
+                            updated[aiIdx] = { ...updated[aiIdx], content: cleanText };
                         }
-                        return updated;
+                        return { messages: updated };
                     });
                 }
             );
 
-            // Finalize with the parsed clean message
-            setMessages((prev) => {
-                const updated = [...prev];
+            useCVStore.setState(state => {
+                const updated = [...state.messages];
                 if (updated[aiIdx]) {
                     updated[aiIdx] = { role: 'model', content: response.message };
                 }
-                return updated;
+                return { messages: updated };
             });
 
             if (response.explanation) {
@@ -93,22 +85,55 @@ export const CVChatAgent: React.FC = () => {
             }
         } catch (error) {
             console.error('Chat error:', error);
-            setMessages((prev) => {
-                const updated = [...prev];
+            useCVStore.setState(state => {
+                const updated = [...state.messages];
                 if (updated[aiIdx]) {
                     updated[aiIdx] = { role: 'model', content: 'Something went wrong. Please try again.' };
                 }
-                return updated;
+                return { messages: updated };
             });
         } finally {
             setIsLoading(false);
         }
+    }, [isLoading, mergeFromAI, setMessages]);
+
+    useEffect(() => {
+        if (uploadedCVText && !hasTriggeredUpload.current && !isLoading) {
+            hasTriggeredUpload.current = true;
+            const cvText = uploadedCVText;
+            setUploadedCVText(null); // Clear immediately to prevent re-triggers
+
+            // Small delay to let the greeting message render first
+            setTimeout(() => {
+                sendMessage(
+                    `I've uploaded my existing CV. Here is the full text extracted from it:\n\n---\n${cvText}\n---\n\nPlease review this CV, extract all the structured information (name, contact details, experience, education, skills), and then help me improve it section by section.`
+                );
+            }, 1500);
+        }
+    }, [uploadedCVText, isLoading, sendMessage, setUploadedCVText]);
+
+    // Ensure focus returns to input after loading finishes
+    useEffect(() => {
+        if (!isLoading) {
+            // Small timeout to allow DOM updates
+            setTimeout(() => {
+                inputRef.current?.focus();
+            }, 50);
+        }
+    }, [isLoading]);
+
+    const handleSend = async () => {
+        const userMessage = input.trim();
+        setInput('');
+        await sendMessage(userMessage);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSend();
+            if (!isLoading) {
+                handleSend();
+            }
         }
     };
 
@@ -132,26 +157,17 @@ export const CVChatAgent: React.FC = () => {
     return (
         <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             {/* ========== HEADER ========== */}
-            <div className="bg-[#1a1a2e] text-white px-5 py-4 flex items-center justify-between">
+            <div className="bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/10 rounded-xl">
-                        <Bot size={20} className="text-emerald-400" />
+                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <Bot size={20} />
                     </div>
-                    <div>
-                        <h3 className="font-semibold text-sm">Career Architect</h3>
-                        <p className="text-[10px] text-slate-400 tracking-wide uppercase">Gemini 2.5 Flash</p>
+                    {/* Simplified Header */}
+                    <div className="flex flex-col">
+                        <h3 className="font-semibold text-sm leading-none text-slate-800">CV Assistant</h3>
+                        <span className="text-[10px] text-slate-400">AI Career Strategist</span>
                     </div>
                 </div>
-
-                {/* Strategy Pill */}
-                {cvData.meta.target_role && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full text-xs">
-                        <Sparkles size={12} className="text-amber-400" />
-                        <span className="text-slate-300">
-                            {cvData.meta.target_industry || 'General'} / {cvData.meta.target_role} / {cvData.meta.target_pages}-Page
-                        </span>
-                    </div>
-                )}
             </div>
 
             {/* ========== STRATEGY EXPLANATION BANNER ========== */}
@@ -179,10 +195,10 @@ export const CVChatAgent: React.FC = () => {
                         {msg.content ? (
                             <div
                                 className={`
-                                    max-w-[85%] p-4 text-sm leading-relaxed
+                                    max-w-[75%] p-4 text-sm leading-relaxed shadow-sm
                                     ${msg.role === 'user'
-                                        ? 'bg-[#1a1a2e] text-white rounded-2xl rounded-br-md'
-                                        : 'bg-white border border-slate-200 text-slate-700 rounded-2xl rounded-bl-md shadow-sm'
+                                        ? 'bg-[#0f766e] text-white rounded-2xl rounded-br-none'
+                                        : 'bg-white border border-slate-100 text-slate-700 rounded-2xl rounded-bl-none'
                                     }
                                 `}
                             >
@@ -200,32 +216,45 @@ export const CVChatAgent: React.FC = () => {
             </div>
 
             {/* ========== INPUT AREA ========== */}
-            <div className="p-4 bg-white border-t border-slate-100">
-                {/* Help Me Answer button */}
-                <button
-                    onClick={() => setInput("I worked at [Company] as a [Role]. I mostly did [Task 1] and [Task 2]. I'm not sure what my achievements were.")}
-                    disabled={isLoading}
-                    className="mb-2 flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-600 transition-colors disabled:opacity-40"
-                >
-                    <HelpCircle size={13} />
-                    <span>Help me answer</span>
-                </button>
-                <div className="relative">
+            <div className="border-t border-slate-100 bg-[#FAFBFC] px-5 pt-3 pb-4">
+                {/* Quick Replies */}
+                {!isLoading && (
+                    <div className="flex justify-end mb-3 pr-1">
+                        <button
+                            onClick={() => setInput("Can you give me an example or suggestion for this section?")}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium transition-colors border border-emerald-200 shadow-sm"
+                        >
+                            <Sparkles size={12} /> Help me answer
+                        </button>
+                    </div>
+                )}
+
+                <div className="relative shadow-xl rounded-2xl bg-white">
                     <input
+                        ref={inputRef}
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Type your answer... it's okay to be rough!"
-                        className="w-full pl-4 pr-14 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/40 transition-all"
-                        disabled={isLoading}
+                        placeholder={isLoading ? "AI is thinking..." : "Type your answer..."}
+                        className="w-full pl-5 pr-14 py-4 bg-white border-0 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-700 placeholder:text-slate-400"
+                        autoFocus
                     />
                     <button
                         onClick={handleSend}
                         disabled={isLoading || !input.trim()}
-                        className="absolute right-2 top-2 p-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="absolute right-2 top-2 bottom-2 aspect-square flex items-center justify-center bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform active:scale-95"
                     >
-                        <Send size={16} />
+                        {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                    </button>
+                </div>
+
+                <div className="text-center mt-2">
+                    <button
+                        onClick={() => setInput("Help me answer this...")}
+                        className="text-[10px] text-slate-400 hover:text-emerald-500 transition-colors flex items-center justify-center gap-1 mx-auto"
+                    >
+                        <HelpCircle size={10} /> Not sure what to say?
                     </button>
                 </div>
             </div>

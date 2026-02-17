@@ -1,28 +1,7 @@
 import {
   LayoutDashboard,
-  Briefcase,
-  BookOpen,
-  Users,
-  Settings,
-  Zap,
-  Target,
-  TrendingUp,
-  FileText,
-  Headphones,
-  Mic,
   PenTool,
-  BrainCircuit,
   Radar,
-  Info,
-  List,
-  Shield,
-  Map,
-  Languages,
-  Vault,
-  ShieldCheck,
-  RefreshCcw,
-  FileCheck,
-  ScrollText
 } from 'lucide-react';
 import { Feature, NavItem } from './types';
 
@@ -30,13 +9,8 @@ export const APP_NAME = "The Bridge";
 
 export const NAVIGATION_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
-  // { label: 'CV Audit', icon: ShieldCheck, path: '/cv-audit' }, // Removed per refactor
   { label: 'CV Builder', icon: PenTool, path: '/cv-builder' },
   { label: 'Opportunity Radar', icon: Radar, path: '/radar' },
-  { label: 'Interview Simulation', icon: Mic, path: '/simulation' },
-  { label: 'Re:Turn Hub', icon: RefreshCcw, path: '/return-hub' },
-  { label: 'Terms & Conditions', icon: ScrollText, path: '/terms' },
-  { label: 'About Platform', icon: Info, path: '/about' },
 ];
 
 export const INITIAL_FEATURES: Feature[] = [
@@ -59,19 +33,11 @@ export const INITIAL_FEATURES: Feature[] = [
   {
     id: 'opportunity-radar',
     title: 'Opportunity Radar',
-    description: 'Search the market for roles matching your CV. Tailored for professionals earning £25k-£70k seeking their next step up.',
+    description: 'Work in Progress — Search the market for roles matching your CV. Coming soon.',
     icon: Radar,
-    status: 'active',
-    actionLabel: 'Scan Market'
+    status: 'coming_soon' as const,
+    actionLabel: 'Coming Soon'
   },
-  {
-    id: 'return-hub',
-    title: 'Re:Turn Hub',
-    description: 'A sanctuary for returning to work. CV Audit, Flex Negotiation simulation, and 90-day tactical roadmap.',
-    icon: RefreshCcw,
-    status: 'active',
-    actionLabel: 'Enter Sanctuary'
-  }
 ];
 
 export const MOCK_USER = {
