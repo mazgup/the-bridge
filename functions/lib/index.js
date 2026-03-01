@@ -32,11 +32,20 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __asyncValues = (this && this.__asyncValues) || function (o) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var m = o[Symbol.asyncIterator], i;
+    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
+    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
+    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateReturnRoadmap = exports.getFlexSimulationResponse = exports.getFlexSimulationStart = exports.evaluateFlexRequest = exports.getNegotiationRebuttal = exports.generateInterviewCheatSheet = exports.analyzeInterviewAnswer = exports.getNextInterviewQuestion = exports.startInterviewSimulation = exports.generateLinkedInContent = exports.analyzeKeywords = exports.auditConfidence = exports.suggestGapStrategy = exports.enhanceExperience = exports.generateSkillsBasedCV = exports.generateCVFromChat = exports.continueCVChat = exports.startCVChat = exports.generateIndustryPulse = exports.generateBattleCard = exports.findOpportunities = exports.parseCVText = exports.analyzeJobMatch = exports.getDailyInspiration = exports.calculateCatalystScore = void 0;
+exports.streamCVConversation = exports.generateReturnRoadmap = exports.getFlexSimulationResponse = exports.getFlexSimulationStart = exports.evaluateFlexRequest = exports.getNegotiationRebuttal = exports.generateInterviewCheatSheet = exports.analyzeInterviewAnswer = exports.getNextInterviewQuestion = exports.startInterviewSimulation = exports.generateLinkedInContent = exports.analyzeKeywords = exports.auditConfidence = exports.suggestGapStrategy = exports.enhanceExperience = exports.generateSkillsBasedCV = exports.generateCVFromChat = exports.continueCVChat = exports.startCVChat = exports.generateIndustryPulse = exports.generateBattleCard = exports.findOpportunities = exports.parseCVText = exports.analyzeJobMatch = exports.getDailyInspiration = exports.calculateCatalystScore = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const genai_1 = require("@google/genai");
+const cors = __importStar(require("cors"));
+const corsHandler = cors.default ? cors.default({ origin: true }) : cors({ origin: true });
 admin.initializeApp();
 const apiKey = process.env.GEMINI_API_KEY;
 const genAI = apiKey ? new genai_1.GoogleGenAI({ apiKey }) : null;
@@ -1152,5 +1161,202 @@ exports.generateReturnRoadmap = functions.runWith({ secrets: ["GEMINI_API_KEY"] 
             keyTip: "Your break gave you perspective—use it as a strength."
         };
     }
+});
+// --- CV Streaming Function ---
+function getSystemPrompt() {
+    const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    return `You are the "Master Career Architect." You adapt your strategy based on the candidate's seniority.
+Your goal is to build the *perfect* CV for the user's level.
+
+**TODAY'S DATE: ${today}**
+
+**PHASE 1: INSTANT CLASSIFICATION (THE 4 PATHS)**
+As soon as you receive the user's history, classify them immediately. This dictates your *entire* behavior.
+You MUST output the "archetype" in the JSON "meta" field.
+
+**PATH A: "THE BRIDGE BUILDER" (Returners / Manual Pivot / No Experience)**
+- **Triggers:** "Stay at home parent", "Warehouse", "Retail", "Cleaner", "Nervous", "First job".
+- **Goal:** CONFIDENCE & TRANSLATION. (Fill 1 Page).
+- **Format:** FORCE **Modern 1-Page**.
+- **Persona:** The "Supportive Biographer." Warm, validating, high-empathy.
+- **Strategy:** **"Mirror & Elevate."**
+  - **CRITICAL:** Do NOT "interrogate" this user. They do not know corporate buzzwords.
+  - **Technique:** Ask for their *story* ("Walk me through a busy shift"), then YOU translate it into skills.
+  - *Example:* User says "School run" -> You write "Complex Logistics."
+
+**PATH B: "THE COACH" (Emerging Talent / 0-4 Years)**
+- **Triggers:** "Student", "Graduate", "Intern".
+- **Goal:** FILL 1 Page.
+- **Format:** FORCE **Modern 1-Page**.
+- **Persona:** The "Academic Miner." Helpful Mentor.
+- **Strategy:** **"The Degree is the Job."**
+  - Expand on modules, grades, and thesis. Break skills into micro-categories.
+  - Treat projects like jobs ("What stack did you use?").
+
+**PATH C: "THE STRATEGIST" (The Professional / 4-7 Years)**
+- **Triggers:** White Collar, "Manager", "Team Lead".
+- **Goal:** Strong 1 Page or Lean 2 Pages.
+- **Format:** User Choice (Modern vs. Classic).
+- **Persona:** The "Branding Expert." Collaborative.
+- **Strategy:** **"Differentiation."**
+  - Avoid generic lists. Ask: "What made you different from the other 5 people with this job title?"
+
+**PATH D: "THE HEADHUNTER" (Executive / 7+ Years)**
+- **Triggers:** "Director", "VP", "Head of".
+- **Goal:** EXPAND to 2 Pages (Refuse 1-page brevity).
+- **Format:** FORCE **Classic Oxford 2-Page**.
+- **Persona:** The "Exacting Boss." Ruthless, metric-obsessed.
+- **Strategy:** **"The Audit."**
+  - "This bullet point is too vague for a Director. Give me revenue, efficiency %, team size, and budget."
+
+---
+
+**PHASE 2: CORE CONVERSATION FLOW (Your Strict Guardrails)**
+Follow this sequence exactly.
+
+1. **Contact:** Quick collection of basics.
+   - *Mandatory:* Name, Email, Phone, Location (City, Country).
+   - *Rule:* If ANY are missing, **STOP** and ask for them before proceeding.
+
+2. **Target Role & History Check (CRITICAL):**
+   - User says: "Admin" or "Developer".
+   - **YOU MUST ASK:** "Great goal. **Have you worked as an Admin before, or is this your first step into this career?**"
+   - **DO NOT ASSUME** they have done the job yet.
+   - *Logic:*
+     - If "First job" or "Career change" -> Switch to **PATH A (Bridge)**.
+     - If "I've done it for 5 years" -> Switch to **PATH C (Strategist)**.
+     - If "I've done it for 10 years" -> Switch to **PATH D (Headhunter)**.
+
+3. **Target Role -> EXPERIENCE JUMP:**
+   - Once "Target Role" is established...
+   - **GO STRAIGHT TO EXPERIENCE.**
+   - Do NOT ask about Education yet (unless they identify as a Student/Intern).
+   - The user wants to see their work history populate first. Ask: "**Tell me about your most recent role...**"
+
+4. **Experience (The Deep Dive):**
+   - **FOR PATH C & D (Pros/Execs):** INTERROGATE. Ask 2 follow-up rounds if data is thin. "Refusing to proceed until we flesh this out" is valid.
+   - **FOR PATH A (Bridge):** NARRATE. Do not interrogate. Ask: "What was the most stressful part of the week?" and infer the skill yourself.
+
+5. **Education / Skills:**
+   - **CRITICAL:** If they mention a degree or school, **YOU MUST ASK FOR THE SCHOOL NAME** and **YEAR**.
+   - Do NOT accept "I did GCSEs" without asking "Which school?"
+   - Never output "Undisclosed School" unless they explicitly refuse to say.
+
+**MANDATORY JSON OUTPUT:**
+Every response where you collect new information MUST include a JSON block.
+Do NOT return partial lists. Return the COMPLETE list for that section.
+
+Format:
+\`\`\`json_cv_update
+{
+  "meta": {
+    "template": "modern",          
+    "target_pages": 1,
+    "archetype": "Bridge Builder" // 'Bridge Builder' | 'The Coach' | 'The Strategist' | 'The Headhunter'
+  },
+  "content": {
+    "experience": [ "FULL_LIST_OF_ROLES_HERE" ],
+    "skills": [
+      { "category": "Technical", "items": ["React", "Node.js"] },
+      { "category": "Soft Skills", "items": ["Leadership", "Communication"] }
+    ],
+    // ... other sections
+  }
+}
+\`\`\`
+
+**CRITICAL RULES:**
+1. **NO LAZINESS:** Return COMPLETE lists.
+2. **SKILLS FORMAT:** 'skills' MUST be an array of objects with 'category' and 'items'. DO NOT send a flat list of strings.
+3. **ALWAYS GENERATE A SUMMARY:**
+   - **Junior:** "Ambitious [Major] graduate with strong foundation in..."
+   - **Senior:** "Results-oriented Director with 10+ years driving..."
+4. **NEVER EXPLAIN THE JSON:** Just say "I've updated the draft. Let's look at..."
+5. **MANDATORY CTA:** You MUST end every response with a direct question or instruction. **The question itself must be wrapped in bold asterisks (e.g. "**What is your current role?**")** so the user sees it immediately.
+6. **ZERO HALLUCINATION:** If it's not in the JSON, it's not on the CV. Ensure your JSON perfectly matches your conversational claims.
+`;
+}
+exports.streamCVConversation = functions.runWith({ secrets: ["GEMINI_API_KEY"] }).https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        var _a, e_1, _b, _c;
+        if (req.method !== 'POST' && req.method !== 'OPTIONS') {
+            res.status(405).send('Method Not Allowed');
+            return;
+        }
+        if (req.method === 'OPTIONS') {
+            res.status(204).send('');
+            return;
+        }
+        if (!genAI) {
+            res.status(500).send('Gemini API not configured');
+            return;
+        }
+        const { history, currentCV, latestUserMessage } = req.body;
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        req.setTimeout(0); // Disable timeout
+        try {
+            const contextMessage = `User says: "${latestUserMessage}"\n\nCurrent CV State(include ALL existing data when sending json_cv_update): \n${JSON.stringify(currentCV, null, 2)} \n\nIMPORTANT: You MUST include a \`\`\`json_cv_update\`\`\` block if the user provided any new information.`;
+            const sanitized = [];
+            let foundFirstUser = false;
+            for (const msg of history || []) {
+                const entry = { role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.content }] };
+                if (!foundFirstUser) {
+                    if (msg.role === "user") {
+                        sanitized.push(entry);
+                        foundFirstUser = true;
+                    }
+                }
+                else {
+                    const last = sanitized[sanitized.length - 1];
+                    if (msg.role === last.role) {
+                        last.parts[0].text += "\n\n" + msg.content;
+                    }
+                    else {
+                        sanitized.push(entry);
+                    }
+                }
+            }
+            if (sanitized.length > 0 && sanitized[sanitized.length - 1].role === "user") {
+                sanitized.pop();
+            }
+            const responseStream = await genAI.models.generateContentStream({
+                model: 'gemini-2.5-flash',
+                contents: [
+                    ...sanitized,
+                    { role: 'user', parts: [{ text: contextMessage }] }
+                ],
+                config: {
+                    systemInstruction: getSystemPrompt()
+                }
+            });
+            try {
+                for (var _d = true, responseStream_1 = __asyncValues(responseStream), responseStream_1_1; responseStream_1_1 = await responseStream_1.next(), _a = responseStream_1_1.done, !_a; _d = true) {
+                    _c = responseStream_1_1.value;
+                    _d = false;
+                    const chunk = _c;
+                    const chunkText = chunk.text;
+                    if (chunkText) {
+                        res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+                    }
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (!_d && !_a && (_b = responseStream_1.return)) await _b.call(responseStream_1);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+            res.write(`data: [DONE]\n\n`);
+            res.end();
+        }
+        catch (error) {
+            console.error('Error in streamCVConversation:', error);
+            res.write(`data: ${JSON.stringify({ error: error.message || 'Stream failed' })}\n\n`);
+            res.end();
+        }
+    });
 });
 //# sourceMappingURL=index.js.map

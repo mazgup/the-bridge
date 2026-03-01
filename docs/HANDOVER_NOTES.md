@@ -1,69 +1,61 @@
 # Handover Notes & Current Status
 
-**Status:** 🚧 Work in Progress (Alpha)
-**Date:** February 2026
-**Priority:** High - Transitioning from Prototype to MVP
+**Status:** ✅ Production (AI CV Builder deployed and live)
+**Date:** 28 February 2026
+**Deployed:** Firebase Hosting
 
-## ⚠️ Important Context
-**Everything is up for challenge.**
-The current codebase represents a high-fidelity functional prototype. **Nothing is cemented.** The design, user flows, feature sets, and especially the technical architecture are all open to iteration and improvement. The goal so far has been to visualize the "Professional Sanctuary" concept and test the AI interactions.
+> **⚠️ NOTE:** This file is a supplementary handover note. The primary handover document is [/HANDOVER.md](../HANDOVER.md). Always refer to that file first — it is the most complete and up-to-date source.
+
+---
 
 ## 1. Current State of Development
-We have built a **Frontend-Only Prototype** using React + Vite.
+
+The platform is **past the prototype phase**. The Firebase backend is fully integrated and the app is deployed.
 
 ### What is Working ✅
--   **UI/UX:** The "Glassmorphic" aesthetic, navigation, and responsive layout are implemented.
--   **AI Integration:** The `geminiService.ts` layer successfully connects to Google Gemini to generate:
-    -   CV rewrites & audits.
-    -   Interview questions & feedback.
-    -   Career roadmaps.
-    -   Job match analysis (mock data).
--   **Core Modules:**
-    -   **Dashboard:** Readiness gauge logic is functional (though based on local state).
-    -   **CV Studio:** Both "Builder" (Chat) and "Audit" (Form) modes work with AI.
-    -   **Interview Lab:** Chat interface works, provides real-time feedback.
-    -   **Re:Turn Hub:** Flex Negotiator and Roadmap generation are functional.
+-   **Auth**: Invite-only Google Sign-In. Admin role detection via hardcoded ADMIN_EMAILS in `AuthContext.tsx`.
+-   **AI CV Builder**: Conversational agent with Gemini 2.5 Flash. 4-Path Archetype system fully implemented. Streaming, JSON parsing, and normalisation all working.
+-   **Multi-CV Gallery**: Create, load, save, delete. Auto-save to `localStorage`.
+-   **PDF Export**: Oxford Strict and Modern Impact templates both production-ready.
+-   **Admin Dashboard**: Invite generation/deletion, user list, user CV inspection (read-only).
+-   **Feedback System**: Global feedback button writes to Firestore.
 
-### What is Mocked / Temporary 🚧
--   **No Backend:** **CRITICAL.** The current app has **zero** persistence. Reloading the page wipes all user data (CV, chat history, settings).
-    -   *Decision:* This was a temporary measure for rapid prototyping.
-    -   *Next Step:* A full backend (Node/Express, Python/FastAPI, or Supabase/Firebase) **MUST** be implemented to save user profiles, CV versions, and history.
--   **Opportunity Radar:** The job data is currently hardcoded mock data (`MOCK_JOBS`). The "Search" function simulates an API call but returns the same static list.
--   **Authentication:** There is no login system. The user is hardcoded as "Alex".
+### What is Mocked / Not Yet Implemented 🚧
+-   **CV data not in Firestore**: CV data only persists in `localStorage`. If the user clears their browser or moves to another device, data is lost. This is the **#1 next priority**.
+-   **All other modules**: Opportunity Radar, Simulation Lab, LinkedIn Sync, Re:Turn Hub, Cheat Sheets, Knowledge Base, Upskill, First 90 Days, Jargon Buster — all scaffolded but not implemented. All `geminiService.ts` exports beyond `streamCVConversation` are stubs.
+-   **Opportunity Radar**: Job data is hardcoded mock data. Needs real API.
+
+---
 
 ## 2. Immediate Next Steps for the Next Agent
 
-### A. Backend Implementation (Priority #1)
--   **Goal:** Persist user data.
--   **Tasks:**
-    1.  Select a backend provider (Supabase is recommended for speed/auth).
-    2.  Set up Authentication (Email/Password, LinkedIn OAuth).
-    3.  Create Database Schema:
-        -   `Users` (Profile, Subscription Status)
-        -   `CVs` (Versions, Parsed Data)
-        -   `Simulations` (History, Scores)
-        -   `Jobs` (Saved Opportunities)
-    4.  Migrate `geminiService.ts` calls to a backend proxy to secure the API Key (currently exposed in frontend code/env).
+### A. Persist CV Data to Firestore (Priority #1)
+-   **Goal:** Ensure user CV data survives across sessions, devices, and browsers.
+-   **Approach:** Write `cvData` and `messages` to `users/{uid}/cvs/{cvId}` in Firestore on every save.
+-   **Modify:** `cvStore.ts` — update `saveCurrentToIndex` to write to Firestore in addition to `localStorage`.
+-   **Load:** On `loadCV`, first check `localStorage`, fall back to Firestore if not present.
 
-### B. Feature Completion
--   **Opportunity Radar:** Connect to a real Job Search API (e.g., Adzuna, Reed, or Google Jobs) to replace mock data.
--   **Voice Mode:** The Interview Simulation currently only supports text. Implement Speech-to-Text (STT) and Text-to-Speech (TTS) for a real voice interview experience.
--   **Payment Gateway:** Integration with Stripe for subscription management.
+### B. Complete a Second Module
+The next logical module to wire up is likely **LinkedIn Sync** (simplest: single AI call generating content from CV data) or **Opportunity Radar** (requires a job API key integration).
 
-### C. Testing Required
--   **AI Hallucination:** Test the "Cheat Sheet" and "Battle Card" generation with edge-case Job Descriptions to ensure accuracy.
--   **Mobile Responsiveness:** The "Glass Card" grids and complex forms need thorough testing on smaller screens.
--   **State Management:** As the app grows, `useState` passing will become unmanageable. Consider Context API or Redux/Zustand.
+### C. Implement AI-Powered Persona Survey (PRD Dependency)
+Per the PLATFORM_OVERVIEW, a "Survey & Persona DNA" module was being planned. This would involve a pre-CV onboarding survey to classify users before the builder starts. The 4-Path Archetype in `geminiService.ts` already does this via conversation; the survey would pre-populate the classification.
 
-## 3. Known Issues / Refinements Needed
--   **Performance:** The "Glassmorphism" effect (blur) can be performance-heavy on older devices.
--   **Accessibility:** Contrast ratios on the "Glass" UI need auditing.
--   **Error Handling:** API failures (Gemini quotas, network issues) currently show basic alerts or console logs. Needs user-friendly error boundaries.
+---
 
-## 4. Vision & Scope
-The goal is to build a "Sanctuary".
+## 3. Known Issues / Refinements
+
+| Issue | Notes |
+|-------|-------|
+| CV data not in Firestore | Priority #1. Currently localStorage only. |
+| Mobile PDF preview | Hidden on small screens. Add a "Preview" tab. |
+| Error boundaries | API failures show basic errors. Needs user-friendly error boundaries. |
+| Accessibility | Glass UI contrast ratios need auditing. |
+| Performance | Glassmorphism blur can be heavy on older devices. |
+
+---
+
+## 4. Vision & Scope (Unchanged)
 -   **Tone:** Encouraging, Authoritative, Calm.
--   **Target:** £25k-£75k professionals & Returners.
--   **Key Differentiator:** We don't just "fix grammar"; we "reframe narratives" using AI.
-
-**Handover Complete.** Good luck!
+-   **Target:** £25k–£75k professionals & Returners.
+-   **Key Differentiator:** Reframes narratives using AI, not just grammar-checks.

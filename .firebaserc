@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "the-bridge-app-2026"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }

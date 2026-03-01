@@ -6,13 +6,7 @@
 // Output: Strict JSON matching CVData schema.
 // ============================================================
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { CVData, CVProfile, INITIAL_CV_PROFILE, INITIAL_CV_DATA } from "../components/cv/CVTypes";
-
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
-const MODEL_NAME = "gemini-2.5-flash";
-
-const genAI = new GoogleGenerativeAI(API_KEY);
 
 // ============================================================
 // Chat Types
@@ -29,135 +23,6 @@ export interface AIResponse {
 }
 
 // ============================================================
-// System Prompt — The Career Strategist Persona
-// ============================================================
-// Dynamic system prompt with current date injected
-function getSystemPrompt(): string {
-  const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  return `You are the "Master Career Architect." You adapt your strategy based on the candidate's seniority.
-Your goal is to build the *perfect* CV for the user's level.
-
-**TODAY'S DATE: ${today}**
-
-**PHASE 1: INSTANT CLASSIFICATION (THE 4 PATHS)**
-As soon as you receive the user's history, classify them immediately. This dictates your *entire* behavior.
-You MUST output the "archetype" in the JSON "meta" field.
-
-**PATH A: "THE BRIDGE BUILDER" (Returners / Manual Pivot / No Experience)**
-- **Triggers:** "Stay at home parent", "Warehouse", "Retail", "Cleaner", "Nervous", "First job".
-- **Goal:** CONFIDENCE & TRANSLATION. (Fill 1 Page).
-- **Format:** FORCE **Modern 1-Page**.
-- **Persona:** The "Supportive Biographer." Warm, validating, high-empathy.
-- **Strategy:** **"Mirror & Elevate."**
-  - **CRITICAL:** Do NOT "interrogate" this user. They do not know corporate buzzwords.
-  - **Technique:** Ask for their *story* ("Walk me through a busy shift"), then YOU translate it into skills.
-  - *Example:* User says "School run" -> You write "Complex Logistics."
-
-**PATH B: "THE COACH" (Emerging Talent / 0-4 Years)**
-- **Triggers:** "Student", "Graduate", "Intern".
-- **Goal:** FILL 1 Page.
-- **Format:** FORCE **Modern 1-Page**.
-- **Persona:** The "Academic Miner." Helpful Mentor.
-- **Strategy:** **"The Degree is the Job."**
-  - Expand on modules, grades, and thesis. Break skills into micro-categories.
-  - Treat projects like jobs ("What stack did you use?").
-
-**PATH C: "THE STRATEGIST" (The Professional / 4-7 Years)**
-- **Triggers:** White Collar, "Manager", "Team Lead".
-- **Goal:** Strong 1 Page or Lean 2 Pages.
-- **Format:** User Choice (Modern vs. Classic).
-- **Persona:** The "Branding Expert." Collaborative.
-- **Strategy:** **"Differentiation."**
-  - Avoid generic lists. Ask: "What made you different from the other 5 people with this job title?"
-
-**PATH D: "THE HEADHUNTER" (Executive / 7+ Years)**
-- **Triggers:** "Director", "VP", "Head of".
-- **Goal:** EXPAND to 2 Pages (Refuse 1-page brevity).
-- **Format:** FORCE **Classic Oxford 2-Page**.
-- **Persona:** The "Exacting Boss." Ruthless, metric-obsessed.
-- **Strategy:** **"The Audit."**
-  - "This bullet point is too vague for a Director. Give me revenue, efficiency %, team size, and budget."
-
----
-
-**PHASE 2: CORE CONVERSATION FLOW (Your Strict Guardrails)**
-Follow this sequence exactly.
-
-1. **Contact:** Quick collection of basics.
-   - *Mandatory:* Name, Email, Phone, Location (City, Country).
-   - *Rule:* If ANY are missing, **STOP** and ask for them before proceeding.
-
-2. **Target Role & History Check (CRITICAL):**
-   - User says: "Admin" or "Developer".
-   - **YOU MUST ASK:** "Great goal. **Have you worked as an Admin before, or is this your first step into this career?**"
-   - **DO NOT ASSUME** they have done the job yet.
-   - *Logic:*
-     - If "First job" or "Career change" -> Switch to **PATH A (Bridge)**.
-     - If "I've done it for 5 years" -> Switch to **PATH C (Strategist)**.
-     - If "I've done it for 10 years" -> Switch to **PATH D (Headhunter)**.
-
-3. **Target Role -> EXPERIENCE JUMP:**
-   - Once "Target Role" is established...
-   - **GO STRAIGHT TO EXPERIENCE.**
-   - Do NOT ask about Education yet (unless they identify as a Student/Intern).
-   - The user wants to see their work history populate first. Ask: "**Tell me about your most recent role...**"
-
-4. **Experience (The Deep Dive):**
-   - **FOR PATH C & D (Pros/Execs):** INTERROGATE. Ask 2 follow-up rounds if data is thin. "Refusing to proceed until we flesh this out" is valid.
-   - **FOR PATH A (Bridge):** NARRATE. Do not interrogate. Ask: "What was the most stressful part of the week?" and infer the skill yourself.
-
-5. **Education / Skills:**
-   - **CRITICAL:** If they mention a degree or school, **YOU MUST ASK FOR THE SCHOOL NAME** and **YEAR**.
-   - Do NOT accept "I did GCSEs" without asking "Which school?"
-   - Never output "Undisclosed School" unless they explicitly refuse to say.
-
-**MANDATORY JSON OUTPUT:**
-Every response where you collect new information MUST include a JSON block.
-Do NOT return partial lists. Return the COMPLETE list for that section.
-
-Format:
-\`\`\`json_cv_update
-{
-  "meta": {
-    "template": "modern",          
-    "target_pages": 1,
-    "archetype": "Bridge Builder" // 'Bridge Builder' | 'The Coach' | 'The Strategist' | 'The Headhunter'
-  },
-  "content": {
-    "experience": [ "FULL_LIST_OF_ROLES_HERE" ],
-    "skills": [
-      { "category": "Technical", "items": ["React", "Node.js"] },
-      { "category": "Soft Skills", "items": ["Leadership", "Communication"] }
-    ],
-    // ... other sections
-  }
-}
-\`\`\`
-
-**CRITICAL RULES:**
-1. **NO LAZINESS:** Return COMPLETE lists.
-2. **SKILLS FORMAT:** 'skills' MUST be an array of objects with 'category' and 'items'. DO NOT send a flat list of strings.
-3. **ALWAYS GENERATE A SUMMARY:**
-   - **Junior:** "Ambitious [Major] graduate with strong foundation in..."
-   - **Senior:** "Results-oriented Director with 10+ years driving..."
-4. **NEVER EXPLAIN THE JSON:** Just say "I've updated the draft. Let's look at..."
-5. **MANDATORY CTA:** You MUST end every response with a direct question or instruction. **The question itself must be wrapped in bold asterisks (e.g. "**What is your current role?**")** so the user sees it immediately.
-6. **ZERO HALLUCINATION:** If it's not in the JSON, it's not on the CV. Ensure your JSON perfectly matches your conversational claims.
-`;
-}
-
-// Helper to clean up the AI's conversational mess
-function cleanAIOutput(text: string): string {
-  // Remove sentences that talk about JSON, blocks, or updating
-  return text
-    .replace(/I (have )?added (a )?JSON.*?(\.|$)/gi, '')
-    .replace(/I (have )?updated the.*?(\.|$)/gi, '')
-    .replace(/Here is the (updated )?JSON.*?(\.|$)/gi, '')
-    .replace(/Please check the JSON.*?(\.|$)/gi, '')
-    .replace(/\s+/g, ' ').trim();
-}
-
-// ============================================================
 // Streaming CV Conversation
 // ============================================================
 export async function streamCVConversation(
@@ -166,76 +31,65 @@ export async function streamCVConversation(
   latestUserMessage: string,
   onChunk?: (partialText: string) => void
 ): Promise<AIResponse> {
-  if (!API_KEY) {
+  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+  if (!projectId) {
     return {
-      message: "[System Error]: Missing API Key. Please set VITE_GEMINI_API_KEY in your .env file.",
+      message: "[System Error]: Missing VITE_FIREBASE_PROJECT_ID in environment variables.",
     };
   }
 
+  const isDev = import.meta.env.DEV;
+  // If running locally, you might want to call the emulator. Otherwise call the deployed function
+  const functionUrl = isDev
+    ? `http://127.0.0.1:5001/${projectId}/us-central1/streamCVConversation`
+    : `https://us-central1-${projectId}.cloudfunctions.net/streamCVConversation`;
+
   try {
-    const model = genAI.getGenerativeModel({
-      model: MODEL_NAME,
-      systemInstruction: getSystemPrompt(),
+    const response = await fetch(functionUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ history, currentCV, latestUserMessage }),
     });
 
-    // --- Sanitize History ---
-    // Gemini requires: starts with 'user', alternates user/model
-    const sanitized: { role: string; parts: { text: string }[] }[] = [];
-    let foundFirstUser = false;
-
-    for (const msg of history) {
-      const entry = { role: msg.role, parts: [{ text: msg.content }] };
-
-      if (!foundFirstUser) {
-        if (msg.role === "user") {
-          sanitized.push(entry);
-          foundFirstUser = true;
-        }
-        // Skip model messages before first user message
-      } else {
-        const last = sanitized[sanitized.length - 1];
-        if (msg.role === last.role) {
-          // Merge consecutive same-role messages
-          last.parts[0].text += "\n\n" + msg.content;
-        } else {
-          sanitized.push(entry);
-        }
-      }
+    if (!response.ok) {
+      let errMessage = `Cloud Function returned ${response.status}`;
+      try { const errObj = await response.json(); errMessage = errObj.error || errMessage; } catch (e) { }
+      throw new Error(errMessage);
     }
 
-    // History must end with 'model' (we're about to send a new 'user' message)
-    if (sanitized.length > 0 && sanitized[sanitized.length - 1].role === "user") {
-      sanitized.pop();
-    }
-
-    const chat = model.startChat({ history: sanitized });
-
-    // --- Build the contextual message ---
-    // Always include CV state so the AI knows what data exists and can include ALL fields in updates
-    const contextMessage = `User says: "${latestUserMessage}"\n\nCurrent CV State(include ALL existing data when sending json_cv_update): \n${JSON.stringify(currentCV, null, 2)} \n\nIMPORTANT: You MUST include a \`\`\`json_cv_update\`\`\` block if the user provided any new information.`;
-
-    // --- Stream with retry (503 protection) ---
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder("utf-8");
     let fullText = "";
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const streamResult = await chat.sendMessageStream(contextMessage);
 
-        for await (const chunk of streamResult.stream) {
-          const chunkText = chunk.text();
-          fullText += chunkText;
-          // Push each token to the UI immediately
-          if (onChunk) {
-            onChunk(fullText);
+    if (reader) {
+      let done = false;
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const dataStr = line.substring(6).trim();
+              if (dataStr === "[DONE]") {
+                done = true;
+                break;
+              }
+              if (dataStr) {
+                try {
+                  const data = JSON.parse(dataStr);
+                  if (data.error) throw new Error(data.error);
+                  if (data.text) {
+                    fullText += data.text;
+                    if (onChunk) onChunk(fullText);
+                  }
+                } catch (e) {
+                  // Ignore JSON parse errors for incomplete chunks
+                }
+              }
+            }
           }
-        }
-        break;
-      } catch (err: any) {
-        if ((err.message?.includes("503") || err.message?.includes("overloaded")) && attempt < 3) {
-          console.warn(`Gemini 503 — retry ${attempt}/3`);
-          fullText = "";
-          await new Promise((r) => setTimeout(r, 1000 * attempt));
-        } else {
-          throw err;
         }
       }
     }
@@ -245,7 +99,7 @@ export async function streamCVConversation(
   } catch (error: any) {
     console.error("Gemini Chat Error:", error);
     return {
-      message: `[System Error]: ${error.message || error.toString()}\n\n(Model: ${MODEL_NAME})`,
+      message: `[System Error]: ${error.message || error.toString()}`,
     };
   }
 }
