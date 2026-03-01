@@ -7,7 +7,6 @@ import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firest
 // Admin emails — hardcoded for security
 // ============================================================
 const ADMIN_EMAILS = [
-    'naominightingale1@gmail.com',
     'mazgup@gmail.com',
 ];
 
